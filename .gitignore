@@ -1,0 +1,7 @@
+# key
+CFAPI.py
+# pyc
+**/*.pyc
+# cahce
+**/__pycache__
+cache
