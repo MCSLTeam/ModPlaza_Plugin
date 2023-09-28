@@ -39,7 +39,7 @@ def enable():
     mods = cf.searchMods(
         gameId=432,
         modLoaderType=schemas.ModLoaderType.Forge,
-        pageSize=16,
+        pageSize=128,
         classId=schemas.MinecraftClassId.Mod,
         searchFilter="",
         sortField=schemas.ModSearchSortField.TotalDownloads,
@@ -87,6 +87,7 @@ class AThread(QThread):
             sortField=schemas.ModSearchSortField.TotalDownloads,
             sortOrder=schemas.SortOrder.Descending,
         )
+        # print(self.mods)
 
 
 class Window(QMainWindow):
@@ -94,7 +95,7 @@ class Window(QMainWindow):
         super().__init__()
         self.labels = []
         self.setWindowTitle("Mod Plaza")
-        self.setGeometry(0, 0, 800, 600)
+        self.setGeometry(1000, 100, 800, 600)
         self.gridLayout = QGridLayout()
         self.button = QPushButton("加载")
         # 为gridLayout添加4 x 4的网格
@@ -112,7 +113,7 @@ class Window(QMainWindow):
         widget.setLayout(self.gridLayout)
         # 将widget设置为Window的中心控件
         self.setCentralWidget(widget)
-        self.cacheDB = CacheDB("cache/curseforge.cache", defaultExpireTime=15)
+        self.cacheDB = CacheDB("cache/curseforge.cache")
 
         curdir = os.path.abspath(os.path.dirname(__file__))
         os.makedirs(os.path.join(curdir, "cache"), exist_ok=True)
@@ -131,17 +132,18 @@ class Window(QMainWindow):
         self.manager = FetchImageManager(cache=self.cacheDB)
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+        print(self.fut)
         self.cacheDB.close()
         super().closeEvent(a0)
 
     def onClicked(self):
         print("开始加载...")
-        self.button.setEnabled(False)
+        # self.button.setEnabled(False)
         self._thread = AThread(self.cf)
         self._thread.start()
         self._thread.onFinished.connect(lambda mods: {
             self.onFinished(mods),
-            QTimer.singleShot(5000, self.onTimer0),
+            # QTimer.singleShot(5000, self.onTimer0),
             self._thread.deleteLater()
         })
 
@@ -151,10 +153,15 @@ class Window(QMainWindow):
 
     def onFinished(self, mods: List[schemas.Mod]):
         self.rv = mods
-        counter = 0
-        for mod in mods:
-            self.manager.asyncFetch(mod.logo.thumbnailUrl, self.labels[counter])
-            counter = (counter + 1) % 16
+        # counter = 0
+        # for mod in mods:
+        #     self.manager.asyncFetch(mod.logo.thumbnailUrl, self.labels[counter])
+        #     counter = (counter + 1) % 16
+        future = self.manager.asyncFetchMultiple(
+            [(mod.logo.thumbnailUrl, self.labels[i]) for i, mod in enumerate(mods)])
+        future.setCallback(lambda _: print("全部加载完成,callback", _))
+        future.done.connect(lambda _: {print("全部加载完成,done", _)})
+        self.fut = future
 
     def clear(self):
         for label in self.labels:

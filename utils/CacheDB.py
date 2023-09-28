@@ -538,7 +538,10 @@ class CacheDB:
 
     def __serialize(self):
         with open(self.filename, "wb") as f:
-            pickle.dump(self.root, f)
+            try:
+                pickle.dump(self.root, f)
+            except BaseException as e:
+                print(e)
 
     def __deserialize(self):
         with open(self.filename, "rb") as f:
@@ -588,23 +591,23 @@ class CacheDB:
 
 
 if __name__ == '__main__':
-    db = CacheDB("test.cache")
-    db.root.addRecord("test/1/2", b"test", expiredTime=1)
-    db.root.addRecord("test/1/2/3", b"test")
-    db.root.addRecord("test2/1/2/3", b"test2")
-    db.root.addRecord("test3/test3", b"test3")
-    print(db.root.has("test3/../test3/test3"))
-    print(db.root.pop("test3/../test3/test3", EntryType.Entry).value)
-    # print(db.root.pop("test2", EntryType.Table))
-    print(db.root.pop("test2/1/2/3", EntryType.Entry))
-    time.sleep(1)
-    print(">>> before vacuum\n")
-    print(db.json())
-    print(">>> after vacuum\n")
-    db.root.vacuum()
-    print(db.json())
-    print(db.root.pop("..", EntryType.Table))
-    db.close()
-    # db = CacheDB("../curseforge.cache")
+    # db = CacheDB("test.cache")
+    # db.root.addRecord("test/1/2", b"test", expiredTime=1)
+    # db.root.addRecord("test/1/2/3", b"test")
+    # db.root.addRecord("test2/1/2/3", b"test2")
+    # db.root.addRecord("test3/test3", b"test3")
+    # print(db.root.has("test3/../test3/test3"))
+    # print(db.root.pop("test3/../test3/test3", EntryType.Entry).value)
+    # # print(db.root.pop("test2", EntryType.Table))
+    # print(db.root.pop("test2/1/2/3", EntryType.Entry))
+    # time.sleep(1)
+    # print(">>> before vacuum\n")
     # print(db.json())
+    # print(">>> after vacuum\n")
+    # db.root.vacuum()
+    # print(db.json())
+    # print(db.root.pop("..", EntryType.Table))
     # db.close()
+    db = CacheDB("../cache/curseforge.cache")
+    print(db.json())
+    db.close()
