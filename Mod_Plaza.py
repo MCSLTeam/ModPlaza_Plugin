@@ -158,8 +158,12 @@ class Window(QMainWindow):
         #     self.manager.asyncFetch(mod.logo.thumbnailUrl, self.labels[counter])
         #     counter = (counter + 1) % 16
         future = self.manager.asyncFetchMultiple(
-            [(mod.logo.thumbnailUrl, self.labels[i]) for i, mod in enumerate(mods)])
+            tasks=[(mod.logo.thumbnailUrl, self.labels[i]) for i, mod in enumerate(mods)],
+            callback=lambda _: print("单个加载完成", _),
+            failedCallback=lambda _: print("单个加载失败", _.getException())
+        )
         future.setCallback(lambda _: print("全部加载完成,callback", _))
+        future.setFailedCallback(lambda _: print("加载失败,failedCallback", _.getException()))
         future.done.connect(lambda _: {print("全部加载完成,done", _)})
         self.fut = future
 
