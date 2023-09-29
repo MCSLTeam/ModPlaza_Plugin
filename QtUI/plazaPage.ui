@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>curseforgePlazaPage</class>
- <widget class="QFrame" name="curseforgePlazaPage">
+ <class>PlazaPage</class>
+ <widget class="QFrame" name="PlazaPage">
   <property name="geometry">
    <rect>
     <x>0</x>
