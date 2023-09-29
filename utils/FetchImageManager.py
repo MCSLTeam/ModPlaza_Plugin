@@ -1,8 +1,6 @@
-import http
 from typing import Callable, List, Tuple, Optional, Iterable, Sized, Dict
 
 import requests
-import urllib3
 from PyQt5.QtCore import QThreadPool, QRunnable, QObject, pyqtSignal, QMutex
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QWidget
@@ -234,7 +232,8 @@ class FetchImageTask(QRunnable):
             qImg = QPixmap()
             try:
                 qImg.loadFromData(
-                    image := requests.get(self.url, timeout=self._timeout, proxies=self._proxy,verify=self._verify).content,
+                    image := requests.get(self.url, timeout=self._timeout, proxies=self._proxy,
+                                          verify=self._verify).content,
                     ext
                 )
                 self.CacheTable.addRecord(path, image, replace=True)
