@@ -2,8 +2,8 @@
   "plugin_name": "Mod_Plaza",
   "version": "0.0.1",
   "description": "模组广场,可以下载模组插件等",
-  "icon": "images.png",
-  "author": "爱喝矿泉水",
+  "icon": "FIF.TILES",
+  "author": "爱喝矿泉水&LxHTT",
   "author_email": "2837434884@qq.com",
   "on_new_thread": false
 }
