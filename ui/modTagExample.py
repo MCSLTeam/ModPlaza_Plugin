@@ -1,6 +1,6 @@
-from qfluentwidgets import BodyLabel
 from PyQt5.QtCore import Qt, QRect, QSize
 from PyQt5.QtWidgets import QSizePolicy
+from qfluentwidgets import BodyLabel
 
 
 class ModTagExample(BodyLabel):
