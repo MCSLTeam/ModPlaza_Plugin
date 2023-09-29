@@ -1,7 +1,6 @@
 from typing import Optional, Dict
 
 import requests
-from PyQt5.QtCore import QRunnable
 from PyQt5.QtGui import QPixmap
 
 from Plugins.Mod_Plaza.cocurrent.future import Future
@@ -9,7 +8,7 @@ from Plugins.Mod_Plaza.cocurrent.task import Task
 from Plugins.Mod_Plaza.utils.CacheDB import CacheEntryTable
 
 
-class FetchImageTask(QRunnable, Task):
+class FetchImageTask(Task):
     def __init__(
             self,
             url,
@@ -18,24 +17,21 @@ class FetchImageTask(QRunnable, Task):
             timeout,
             proxy,
             verify,
-            future: Optional[Future] = None,
+            future: Future,
             parent=None
     ):
-        super().__init__()
+        super().__init__(_id=_id, future=future)
         self.url: Optional[str] = url
         self._parent = parent
-        self._id: int = _id
         self._timeout: int = timeout
         self._proxy: Optional[Dict] = proxy
-        self._future: Future = future
         self._verify = verify
-        self._exception: Optional[BaseException] = None
         self.CacheTable: CacheEntryTable = db.root
 
     def run(self):
         if self.url is None:
             self._exception = Exception("url is None")
-            self._signal.finished.emit((self.url, self._id, self._future, QPixmap(), self._exception))
+            self._taskDone(url=self.url, img=QPixmap(), exception=self._exception)
             return
 
         path = self.url.replace("https://media.forgecdn.net/avatars/thumbnails/", "")
@@ -62,12 +58,4 @@ class FetchImageTask(QRunnable, Task):
             except Exception as e:
                 self._exception = e
 
-        self._signal.finished.emit((self.url, self._id, self._future, qImg, self._exception))
-
-    @property
-    def finished(self):
-        return self._signal.finished
-
-    @property
-    def signal(self):
-        return self._signal
+        self._taskDone(url=self.url, img=qImg, exception=self._exception)

@@ -6,16 +6,36 @@ from PyQt5.QtWidgets import QWidget
 
 from Plugins.Mod_Plaza.cocurrent.fetchImageTask import FetchImageTask
 from Plugins.Mod_Plaza.cocurrent.future import Future
+from Plugins.Mod_Plaza.cocurrent.task import Task
 
 
-class FetchImageManager(QObject):
+class TaskManager(QObject):
+    def __init__(self):
+        super().__init__()
+        self.threadPool = QThreadPool()
+        self.threadPool.setMaxThreadCount(4)
+        self.taskMap = {}
+        self.taskCounter = 0
+
+    def _taskRun(self, task: Task, future: Future, **kwargs):
+        future.setTaskID(self.taskCounter)
+
+        task.signal.finished.connect(self._taskDone)
+        self.threadPool.start(task)
+        self.taskCounter += 1
+
+    def _taskDone(self, fut: Future):
+        """
+        need manually set Future.setFailed() or Future.setResult() to be called!!!
+        """
+        raise NotImplemented
+
+
+class FetchImageManager(TaskManager):
 
     def __init__(self, cache):
         super().__init__()
-        self.threadPool = QThreadPool()
         self.threadPool.setMaxThreadCount(16)
-        self.taskMap = {}
-        self.taskCounter = 0
         self.cache = cache
 
     def asyncFetch(
@@ -52,10 +72,7 @@ class FetchImageManager(QObject):
         future.setCallback(successCallback)
         future.setFailedCallback(failedCallback)
 
-        task.signal.finished.connect(self.__onDone)
-        self.taskMap[self.taskCounter] = target
-        self.threadPool.start(task)
-        self.taskCounter += 1
+        self._taskRun(task, future, target=target)
         return future
 
     def asyncFetchMultiple(
@@ -92,11 +109,18 @@ class FetchImageManager(QObject):
         future = Future.gather(futures)
         return future
 
-    def __onDone(self, data):
+    def _taskRun(self, task: Task, future: Future, **kwargs):
+        self.taskMap[self.taskCounter] = kwargs.get("target")
+        super()._taskRun(task, future, **kwargs)
+
+    def _taskDone(self, fut: Future):
         """
         set Image to target widget and call callback
         """
-        url, _id, fut, img, e = data
+        e = fut.getExtra("exception")
+        _id = fut.getTaskID()
+        img = fut.getExtra("img")
+
         if isinstance(e, Exception):
             fut.setFailed(e)
             self.taskMap[_id].setText("加载失败...")

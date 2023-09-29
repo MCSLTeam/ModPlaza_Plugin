@@ -43,6 +43,7 @@ class Future(QObject):
 
     def __init__(self):
         super().__init__()
+        self._taskID = None
         self._failedCallback = lambda e: None
         self._done = False
         self._failed = False
@@ -104,7 +105,7 @@ class Future(QObject):
             self.done.emit(result)
         else:
             raise RuntimeError("Future already done")
-        self.deleteLater()  # delete this future object
+        # self.deleteLater()  # delete this future object
 
     def setFailed(self, exception: Optional[BaseException]) -> None:
         """
@@ -138,6 +139,12 @@ class Future(QObject):
 
     def getException(self) -> Optional[BaseException]:
         return self._exception
+
+    def setTaskID(self, _id: int) -> None:
+        self._taskID = _id
+
+    def getTaskID(self) -> int:
+        return self._taskID
 
     @staticmethod
     def gather(futures: {Iterable, Sized}) -> 'Future':
