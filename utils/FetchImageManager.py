@@ -4,8 +4,8 @@ from PyQt5.QtCore import QThreadPool, QObject
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QWidget
 
-from Plugins.Mod_Plaza.cocurrent.fetchImageTask import FetchImageTask
-from Plugins.Mod_Plaza.cocurrent.future import Future
+from ..cocurrent.fetchImageTask import FetchImageTask
+from ..cocurrent.future import Future
 
 
 class FetchImageManager(QObject):

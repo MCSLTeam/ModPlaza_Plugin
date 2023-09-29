@@ -4,9 +4,9 @@ import requests
 from PyQt5.QtCore import QRunnable
 from PyQt5.QtGui import QPixmap
 
-from Plugins.Mod_Plaza.cocurrent.future import Future
-from Plugins.Mod_Plaza.cocurrent.task import Task
-from Plugins.Mod_Plaza.utils.CacheDB import CacheEntryTable
+from ..cocurrent.future import Future
+from ..cocurrent.task import Task
+from ..utils.CacheDB import CacheEntryTable
 
 
 class FetchImageTask(QRunnable, Task):
