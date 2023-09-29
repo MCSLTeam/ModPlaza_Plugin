@@ -273,15 +273,8 @@ class FetchImageManager(QObject):
         # 75%概率正常返回,25%概率返回异常
         choice = random.randint(0, 3)
         _id, fut, img = data
-
-        if fut:
-            # fut.setResult(img)
-            if choice:
-                fut.setResult(img)
-                self.taskMap[_id].setPixmap(img)
-                self.callbackMap[_id](img)
-            else:
-                fut.setFailed(Exception("Test Exception"))
-                self.taskMap[_id].setText("加载失败")
+        self.taskMap[_id].setPixmap(img)
+        self.callbackMap[_id](img)
+        fut.setResult(img)
         del self.taskMap[_id]
         del self.callbackMap[_id]

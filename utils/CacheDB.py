@@ -526,20 +526,21 @@ class CacheEntryTable(EntryMixin):
 class CacheDB:
 
     def __init__(self, filename: str, defaultExpireTime=3600):
+        self.defaultExpireTime = defaultExpireTime
+        self.filename = filename
         self.root: CacheEntryTable = CacheEntryTable(
             "$ROOT$",
-            defaultExpireTime=defaultExpireTime
+            defaultExpireTime=self.defaultExpireTime
         )
-        self.filename = filename
-        self.defaultExpireTime = defaultExpireTime
-        self.__isOpening = True
         if os.path.exists(self.filename):
             self.__deserialize()
+        self.__isOpening = True
 
     def __serialize(self):
         with open(self.filename, "wb") as f:
             try:
                 pickle.dump(self.root, f)
+                self.root._defaultExpireTime = self.defaultExpireTime
             except BaseException as e:
                 print(e)
 
