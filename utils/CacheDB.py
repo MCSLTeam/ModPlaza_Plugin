@@ -5,7 +5,7 @@
 import enum
 import json
 import os.path
-import pickle
+import _pickle as pickle
 import time
 from typing import Dict, Union, Optional, List
 

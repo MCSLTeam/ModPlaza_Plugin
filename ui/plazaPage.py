@@ -212,3 +212,5 @@ class PlazaPage(QWidget):
         self.searchSrcTitle.setText("搜索源  ")
         self.modTypeTitle.setText("分类      ")
         self.SearchLineEdit.setPlaceholderText("支持中英文搜索")
+
+
