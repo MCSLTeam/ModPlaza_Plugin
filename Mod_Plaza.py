@@ -75,18 +75,19 @@ class AThread(QThread):
         super().__init__()
         self.mods = None
         self.cf = cf
-        self.finished.connect(lambda: self.onFinished.emit(self.mods.data))
 
     def run(self) -> None:
         self.mods = self.cf.searchMods(
             gameId=432,
             modLoaderType=schemas.ModLoaderType.Forge,
+            index=128,
             pageSize=16,
             classId=schemas.MinecraftClassId.Mod,
             searchFilter="",
             sortField=schemas.ModSearchSortField.TotalDownloads,
             sortOrder=schemas.SortOrder.Descending,
         )
+        self.onFinished.emit(self.mods.data)
         # print(self.mods)
 
 
@@ -113,7 +114,7 @@ class Window(QMainWindow):
         widget.setLayout(self.gridLayout)
         # 将widget设置为Window的中心控件
         self.setCentralWidget(widget)
-        self.cacheDB = CacheDB("cache/curseforge.cache")
+        self.cacheDB = CacheDB("cache/curseforge.cache", defaultExpireTime=86400)
 
         curdir = os.path.abspath(os.path.dirname(__file__))
         os.makedirs(os.path.join(curdir, "cache"), exist_ok=True)
@@ -157,13 +158,19 @@ class Window(QMainWindow):
         #     self.manager.asyncFetch(mod.logo.thumbnailUrl, self.labels[counter])
         #     counter = (counter + 1) % 16
         future = self.manager.asyncFetchMultiple(
-            tasks=[(mod.logo.thumbnailUrl, self.labels[i]) for i, mod in enumerate(mods)],
-            callback=lambda _: print("单个加载完成", _),
-            failedCallback=lambda _: print("单个加载失败", _.getException())
+            tasks=[(mod.logo.url if mod.logo is not None else None, self.labels[i % 16]) for i, mod in enumerate(mods)],
+            timeout=1,
+            successCallback=lambda _: print("单个加载完成", _),
+            failedCallback=lambda _: print(f"单个加载失败,url={_.url}", _.getException())
         )
         future.setFailedCallback(lambda _: print("加载失败,failedCallback", _.getException()))
-        future.done.connect(lambda _: {print("全部加载完成,done", _)})
+        future.done.connect(self.onFutureDone)
         self.fut = future
+
+    def onFutureDone(self, result):
+        failed = len([i for i in result if i is None])
+        success = len(result) - failed
+        QMessageBox.information(self, "加载完成", f"加载完成,\n共尝试加载{len(result)}个,\n成功{success}个,\n失败{failed}个")
 
     def clear(self):
         for label in self.labels:

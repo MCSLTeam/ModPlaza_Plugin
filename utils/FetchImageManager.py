@@ -1,7 +1,8 @@
-import random
-from typing import Callable, List, Tuple, Optional, Iterable, Sized
+import http
+from typing import Callable, List, Tuple, Optional, Iterable, Sized, Dict
 
 import requests
+import urllib3
 from PyQt5.QtCore import QThreadPool, QRunnable, QObject, pyqtSignal, QMutex
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QWidget
@@ -63,6 +64,7 @@ class Future(QObject):
         self._parent = None
         self._callback = lambda _: None
         self._mutex = QMutex()
+        self._extra = {}
 
     def __onChildDone(self, childFuture: 'Future') -> None:
         self._mutex.lock()
@@ -131,7 +133,7 @@ class Future(QObject):
             self.done.emit(self._result)
         else:
             raise RuntimeError("Future already done")
-        self.deleteLater()
+        # self.deleteLater()
 
     def setCallback(self, callback: Callable[[object, ], None]) -> None:
         self._callback = callback
@@ -168,6 +170,15 @@ class Future(QObject):
     def getResult(self) -> object:
         return self._result
 
+    def setExtra(self, key, value):
+        self._extra[key] = value
+
+    def getExtra(self, key):
+        return self._extra.get(key, None)
+
+    def __getattr__(self, item):
+        return self.getExtra(item)
+
     def __repr__(self):
         return f"Future({self._result})"
 
@@ -179,16 +190,33 @@ class Future(QObject):
 
 
 class FetchImageTask(QRunnable):
-    def __init__(self, url, _id, db, future: Optional[Future] = None, parent=None):
+    def __init__(
+            self,
+            url,
+            _id,
+            db,
+            timeout,
+            proxy,
+            future: Optional[Future] = None,
+            parent=None
+    ):
         super().__init__()
-        self.url = url
+        self.url: Optional[str] = url
         self._parent = parent
-        self._id = _id
-        self.signal = Signal()
-        self._future = future
+        self._id: int = _id
+        self._timeout: int = timeout
+        self._proxy: Optional[Dict] = proxy
+        self._signal: Signal = Signal()
+        self._future: Future = future
+        self._exception: Optional[BaseException] = None
         self.CacheTable: CacheEntryTable = db.root
 
     def run(self):
+        if self.url is None:
+            self._exception = Exception("url is None")
+            self._signal.finished.emit((self.url, self._id, self._future, QPixmap(), self._exception))
+            return
+
         path = self.url.replace("https://media.forgecdn.net/avatars/thumbnails/", "")
         filename = path.split("/")[-1]
         path = path.replace(filename, "")[:-1]
@@ -201,17 +229,26 @@ class FetchImageTask(QRunnable):
 
         else:
             print(f">>> Fetching {self.url}")
-            image = requests.get(self.url).content
-            self.CacheTable.addRecord(path, image, replace=True)
-            print(f"<<< Caching {self.url}")
             qImg = QPixmap()
-            qImg.loadFromData(image, ext)
+            try:
+                qImg.loadFromData(
+                    image := requests.get(self.url, timeout=self._timeout, proxies=self._proxy,verify=False).content,
+                    ext
+                )
+                self.CacheTable.addRecord(path, image, replace=True)
+                print(f"<<< Caching {self.url}")
+            except Exception as e:
+                self._exception = e
 
-        self.signal.finished.emit((self._id, self._future, qImg))
+        self._signal.finished.emit((self.url, self._id, self._future, qImg, self._exception))
 
     @property
     def finished(self):
-        return self.signal.finished
+        return self._signal.finished
+
+    @property
+    def signal(self):
+        return self._signal
 
 
 class FetchImageManager(QObject):
@@ -221,48 +258,74 @@ class FetchImageManager(QObject):
         self.threadPool = QThreadPool()
         self.threadPool.setMaxThreadCount(16)
         self.taskMap = {}
-        self.callbackMap = {}
         self.taskCounter = 0
         self.cache = cache
 
     def asyncFetch(
             self,
-            url: str,
+            url: Optional[str],
             target: QWidget,
-            callback: Callable[[QPixmap, ], None] = lambda _: None
+            timeout: int = 10,
+            proxy: Optional[Dict] = None,
+            successCallback: Callable[[QPixmap, ], None] = lambda _: None,
+            failedCallback: Callable[[Future, ], None] = lambda _: None
     ) -> Future:
         """
         :param url: The url to fetch
         :param target: The target widget to set the image to
-        :param callback: The callback to call when the image is fetched (takes the image fetched as an argument)
+        :param timeout: The timeout of the request
+        :param proxy: The proxy to use
+        :param successCallback: The callback to call when the image is fetched (takes the image fetched as an argument)
+        :param failedCallback: The callback to call when the image is failed to fetch (takes the failed future as an argument)
         :return: None
         """
         future = Future()
-        task = FetchImageTask(url, self.taskCounter, self.cache, future)
+        task = FetchImageTask(
+            url=url,
+            _id=self.taskCounter,
+            db=self.cache,
+            timeout=timeout,
+            proxy=proxy,
+            future=future
+        )
+        future.setExtra("url", url)
+        future.setCallback(successCallback)
+        future.setFailedCallback(failedCallback)
+
         task.signal.finished.connect(self.__onDone)
         self.taskMap[self.taskCounter] = target
-        self.callbackMap[self.taskCounter] = callback
         self.threadPool.start(task)
         self.taskCounter += 1
         return future
 
     def asyncFetchMultiple(
             self,
-            tasks: List[Tuple[str, QWidget]],
-            callback: Callable[[QPixmap], None] = lambda _: None,
+            tasks: List[Tuple[Optional[None], QWidget]],
+            timeout: int = 10,
+            proxy: Optional[Dict] = None,
+            successCallback: Callable[[QPixmap], None] = lambda _: None,
             failedCallback: Callable[[Future], None] = lambda _: None
     ) -> Future:
         """
         :param tasks: A list of tuples of (url, target widget)
-        :param callback: The callback to call when an image is fetched (takes image fetched as an argument)
+        :param timeout: The timeout of the request
+        :param proxy: The proxy to use
+        :param successCallback: The callback to call when an image is fetched (takes image fetched as an argument)
         :param failedCallback: The callback to call when an image is failed to fetch (takes the failed future as an argument)
         :return: A Future object that will be done when all images are fetched
         """
         futures = []
         for url, target in tasks:
-            futures.append(fut := self.asyncFetch(url, target))
-            fut.setCallback(callback)
-            fut.setFailedCallback(failedCallback)
+            futures.append(
+                self.asyncFetch(
+                    url,
+                    target,
+                    timeout,
+                    proxy,
+                    successCallback,
+                    failedCallback
+                )
+            )
         future = Future.gather(futures)
         return future
 
@@ -270,11 +333,11 @@ class FetchImageManager(QObject):
         """
         set Image to target widget and call callback
         """
-        # 75%概率正常返回,25%概率返回异常
-        choice = random.randint(0, 3)
-        _id, fut, img = data
-        self.taskMap[_id].setPixmap(img)
-        self.callbackMap[_id](img)
-        fut.setResult(img)
+        url, _id, fut, img, e = data
+        if isinstance(e, Exception):
+            fut.setFailed(e)
+            self.taskMap[_id].setText("加载失败...")
+        else:
+            fut.setResult(img)
+            self.taskMap[_id].setPixmap(img)
         del self.taskMap[_id]
-        del self.callbackMap[_id]
