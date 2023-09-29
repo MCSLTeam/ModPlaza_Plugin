@@ -197,6 +197,7 @@ class FetchImageTask(QRunnable):
             db,
             timeout,
             proxy,
+            verify,
             future: Optional[Future] = None,
             parent=None
     ):
@@ -208,6 +209,7 @@ class FetchImageTask(QRunnable):
         self._proxy: Optional[Dict] = proxy
         self._signal: Signal = Signal()
         self._future: Future = future
+        self._verify = verify
         self._exception: Optional[BaseException] = None
         self.CacheTable: CacheEntryTable = db.root
 
@@ -232,7 +234,7 @@ class FetchImageTask(QRunnable):
             qImg = QPixmap()
             try:
                 qImg.loadFromData(
-                    image := requests.get(self.url, timeout=self._timeout, proxies=self._proxy,verify=False).content,
+                    image := requests.get(self.url, timeout=self._timeout, proxies=self._proxy,verify=self._verify).content,
                     ext
                 )
                 self.CacheTable.addRecord(path, image, replace=True)
@@ -267,6 +269,7 @@ class FetchImageManager(QObject):
             target: QWidget,
             timeout: int = 10,
             proxy: Optional[Dict] = None,
+            verify: bool = True,
             successCallback: Callable[[QPixmap, ], None] = lambda _: None,
             failedCallback: Callable[[Future, ], None] = lambda _: None
     ) -> Future:
@@ -275,6 +278,7 @@ class FetchImageManager(QObject):
         :param target: The target widget to set the image to
         :param timeout: The timeout of the request
         :param proxy: The proxy to use
+        :param verify: Whether to verify the SSL certificate
         :param successCallback: The callback to call when the image is fetched (takes the image fetched as an argument)
         :param failedCallback: The callback to call when the image is failed to fetch (takes the failed future as an argument)
         :return: None
@@ -285,6 +289,7 @@ class FetchImageManager(QObject):
             _id=self.taskCounter,
             db=self.cache,
             timeout=timeout,
+            verify=verify,
             proxy=proxy,
             future=future
         )
@@ -303,6 +308,7 @@ class FetchImageManager(QObject):
             tasks: List[Tuple[Optional[None], QWidget]],
             timeout: int = 10,
             proxy: Optional[Dict] = None,
+            verify: bool = True,
             successCallback: Callable[[QPixmap], None] = lambda _: None,
             failedCallback: Callable[[Future], None] = lambda _: None
     ) -> Future:
@@ -310,6 +316,7 @@ class FetchImageManager(QObject):
         :param tasks: A list of tuples of (url, target widget)
         :param timeout: The timeout of the request
         :param proxy: The proxy to use
+        :param verify: Whether to verify the SSL certificate
         :param successCallback: The callback to call when an image is fetched (takes image fetched as an argument)
         :param failedCallback: The callback to call when an image is failed to fetch (takes the failed future as an argument)
         :return: A Future object that will be done when all images are fetched
@@ -322,6 +329,7 @@ class FetchImageManager(QObject):
                     target,
                     timeout,
                     proxy,
+                    verify,
                     successCallback,
                     failedCallback
                 )
