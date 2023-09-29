@@ -2,6 +2,6 @@
 CFAPI.py
 # pyc
 **/*.pyc
-# cahce
+# cache
 **/__pycache__
 cache
