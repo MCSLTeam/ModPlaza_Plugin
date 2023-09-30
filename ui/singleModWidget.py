@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtWidgets import QWidget, QSizePolicy, QGridLayout, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QSizePolicy, QGridLayout, QHBoxLayout, QSpacerItem
 from qfluentwidgets import (
     BodyLabel,
     CaptionLabel,
@@ -29,11 +29,15 @@ class SingleModWidget(ElevatedCardWidget):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.PixmapLabel.sizePolicy().hasHeightForWidth())
         self.PixmapLabel.setSizePolicy(sizePolicy)
-        self.PixmapLabel.setMinimumSize(QSize(60, 60))
-        self.PixmapLabel.setMaximumSize(QSize(60, 60))
+        self.PixmapLabel.setMinimumSize(QSize(64, 64))
+        self.PixmapLabel.setMaximumSize(QSize(64, 64))
         self.PixmapLabel.setObjectName("PixmapLabel")
 
-        self.gridLayout.addWidget(self.PixmapLabel, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.PixmapLabel, 0, 1, 1, 1)
+
+        spacerItem = QSpacerItem(10, 20, QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.gridLayout.addItem(spacerItem, 0, 0, 1, 1)
+
         self.infoWidget = QWidget(self)
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
