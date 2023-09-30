@@ -5,7 +5,7 @@ from typing import List
 import requests_cache as rqc
 
 from Plugins.Mod_Plaza.CFAPI import KEY
-from Plugins.Mod_Plaza.curseforge import CurseForgeAPI, SchemaClasses as schema, Category
+from Plugins.Mod_Plaza.curseforge import CurseForgeAPI, SchemaClasses as schema
 
 curdir = os.path.abspath(os.path.dirname(__file__))
 

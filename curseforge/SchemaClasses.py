@@ -165,7 +165,7 @@ SECTION_UNKNOWN3 = 4984
 """
 
 
-class MinecraftClassId:
+class MinecraftClassId(enum.Enum):
     BukkitPlugin = 5
     Mod = 6
     ResourcePack = 12

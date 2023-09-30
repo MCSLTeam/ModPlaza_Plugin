@@ -29,7 +29,7 @@ from Plugins.Mod_Plaza.curseforge.Utils import getStructureCategories
 from Plugins.Mod_Plaza.ui.singleModWidget import SingleModWidget
 from Plugins.Mod_Plaza.utils.FetchImageManager import FetchImageManager
 
-CLASS_ID = schemas.MinecraftClassId.Mod
+CLASS_ID = schemas.MinecraftClassId.BukkitPlugin
 CLASS_NAME = CLASS_ID.name
 
 
@@ -123,7 +123,7 @@ class PlazaPage(QWidget):
             classId=self.classID.value,
             sortOrder=schemas.SortOrder.Descending,
             index=0,
-            pageSize=20
+            pageSize=50
         )
 
     def searchMod(self):
@@ -140,18 +140,24 @@ class PlazaPage(QWidget):
     @pyqtSlot(object)
     def onSearchModDone(self, response: schemas.SearchModsResponse):
         mods = response.data
+        widgets = []
         for mod in mods:
             widget = SingleModWidget.getWidget(mod, parent=self.resultScrollArea)
             widget.ModImageRef.setPixmap(QPixmap(96, 96))  # set blank image
             self.resultScrollAreaWidgetContents.layout().addWidget(widget)
+            widgets.append(widget)
 
-        widgets = self.resultScrollAreaWidgetContents.layout().children()
+        if (fut := self.lastPageTaskFuture) is not None:
+            if not fut.isDone():
+                self.fetchImageManager.cancelTask(self.lastPageTaskFuture)
+            self.lastPageTaskFuture.deleteLater()  # delete last page task
         fut = self.fetchImageManager.asyncFetchMultiple(
             tasks=[(w.Mod.logo.thumbnailUrl if w.Mod.logo else None, w.ModImageRef)
                    for w in widgets if isinstance(w, SingleModWidget)],
-            timeout=10
+            timeout=10,
+            verify=False
         )
-        self.lastPageTaskFuture.deleteLater()  # delete last page task
+        fut: Future
         self.lastPageTaskFuture = fut
 
     def setupUI(self):
