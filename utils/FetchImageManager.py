@@ -1,17 +1,17 @@
 from typing import Callable, List, Tuple, Optional, Dict
 
+from PyQt5.QtCore import QSize
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QWidget
 
-from Plugins.Mod_Plaza.cocurrent import TaskManager, Task, Future, FetchImageTask
+from Plugins.Mod_Plaza.concurrent import TaskManager, Task, Future, FetchImageTask
 
 
 class FetchImageManager(TaskManager):
 
-    def __init__(self, cache, useGlobalThreadPool=False):
+    def __init__(self, useGlobalThreadPool=False):
         super().__init__(useGlobalThreadPool)
         self.threadPool.setMaxThreadCount(16)
-        self.cache = cache
 
     def asyncFetch(
             self,
@@ -37,7 +37,6 @@ class FetchImageManager(TaskManager):
         task = FetchImageTask(
             url=url,
             _id=self.taskCounter,
-            db=self.cache,
             timeout=timeout,
             verify=verify,
             proxy=proxy,

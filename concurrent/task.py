@@ -2,7 +2,7 @@ from typing import Optional
 
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable
 
-from Plugins.Mod_Plaza.cocurrent.future import Future
+from Plugins.Mod_Plaza.concurrent.future import Future
 
 
 class Signal(QObject):

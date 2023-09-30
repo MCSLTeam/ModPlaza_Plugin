@@ -58,8 +58,6 @@ class Window(QMainWindow):
         widget.setLayout(self.gridLayout)
         # 将widget设置为Window的中心控件
         self.setCentralWidget(widget)
-        self.cacheDB = CacheDB("cache/curseforge.cache", defaultExpireTime=86400)
-
         curdir = os.path.abspath(os.path.dirname(__file__))
         os.makedirs(os.path.join(curdir, "cache"), exist_ok=True)
         self.cf = CfClient
@@ -69,10 +67,9 @@ class Window(QMainWindow):
         self._thread = None
 
         self.button.clicked.connect(self.onClicked)
-        self.manager = FetchImageManager(cache=self.cacheDB)
+        self.manager = FetchImageManager()
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
-        self.cacheDB.close()
         super().closeEvent(a0)
 
     def onClicked(self):
@@ -99,7 +96,7 @@ class Window(QMainWindow):
         future = self.manager.asyncFetchMultiple(
             tasks=[(mod.logo.thumbnailUrl if mod.logo is not None else None, self.labels[i % 16]) for i, mod in
                    enumerate(mods)],
-            timeout=1,
+            timeout=3,
             successCallback=lambda _: print("单个加载完成", _),
             failedCallback=lambda _: print(f"单个加载失败,url={_.url}", _.getException())
         )

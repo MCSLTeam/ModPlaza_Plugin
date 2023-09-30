@@ -1,11 +1,13 @@
-from PyQt5.QtCore import QSize, Qt, QRect
+from typing import Dict, List
+
+from PyQt5.QtCore import QSize, Qt, QRect, pyqtSlot
 from PyQt5.QtWidgets import (
     QWidget,
     QSizePolicy,
     QGridLayout,
     QHBoxLayout,
     QSpacerItem,
-    QFrame,
+    QFrame, QVBoxLayout,
 )
 from qfluentwidgets import (
     ComboBox,
@@ -17,10 +19,98 @@ from qfluentwidgets import (
     TitleLabel,
 )
 
+import Plugins.Mod_Plaza.curseforge.SchemaClasses as schemas
+from Plugins.Mod_Plaza.Clients import CfClient
+from Plugins.Mod_Plaza.concurrent.curseforgeTask import GetMinecraftInfoManager, CurseForgeSearchBody, \
+    MinecraftModSearchManager
+from Plugins.Mod_Plaza.curseforge.Utils import getStructureCategories
+from Plugins.Mod_Plaza.ui.singleModWidget import SingleModWidget
+from Plugins.Mod_Plaza.utils.FetchImageManager import FetchImageManager
+
 
 class PlazaPage(QWidget):
     def __init__(self, parent):
         super().__init__(parent=parent)
+        self.setupUI()
+        # mod repository
+        self.searchSrcComboBox.addItem("CurseForge")
+        self.sortTypeComboBox.addItems(schemas.ModSearchSortField._member_names_)
+
+        # curseforge
+        # fetch minecraft info
+        self.minecraftInfoManager = GetMinecraftInfoManager(CfClient)
+        self.minecraftModSearchManager = MinecraftModSearchManager(CfClient)
+        self.fetchImageManager = FetchImageManager()
+
+        self.minecraftInfoManager.asyncGetMinecraftInfo().done.connect(self.getCurseForgeInfo)
+        # data structure
+        self.minecraftVersionMap: Dict[str, schemas.MinecraftGameVersion] = {}
+        self.modCategoryMap: Dict[str, schemas.Category] = {}
+        self.sortBodyMap: Dict[str, schemas.ModSearchSortField] = {
+            name: schemas.ModSearchSortField[name].value for name in schemas.ModSearchSortField._member_names_
+        }
+
+        # connect
+        self.SearchLineEdit.returnPressed.connect(self.searchMod)
+        self.SearchLineEdit.searchButton.clicked.connect(self.searchMod)
+
+    @pyqtSlot(object)
+    def getCurseForgeInfo(self, data):
+        minecraftVersions: List[schemas.MinecraftGameVersion] = data["minecraftVersions"]
+        modCategories: List[schemas.Category] = getStructureCategories(data["modCategories"], 6)  # Mod
+        for mcVersion in minecraftVersions:
+            self.minecraftVersionMap[mcVersion.versionString] = mcVersion
+            self.mcVersionComboBox.addItem(mcVersion.versionString)
+
+        for root in modCategories:
+            self.modCategoryMap[root.name] = root
+            self.modTypeComboBox.addItem(root.name)
+            if root.children:
+                for child in root.children:
+                    name = f"{root.name} > {child.name}"
+                    self.modCategoryMap[name] = child
+                    self.modTypeComboBox.addItem(name)
+        self.SearchLineEdit.setEnabled(True)
+
+    def getCurrentSearchBody(self) -> CurseForgeSearchBody:
+        mcVersion = self.minecraftVersionMap[self.mcVersionComboBox.currentText()]
+        modCategory = self.modCategoryMap[self.modTypeComboBox.currentText()]
+        sortType = self.sortBodyMap[self.sortTypeComboBox.currentText()]
+        sortFilter = self.SearchLineEdit.text().strip()
+        return CurseForgeSearchBody(
+            minecraftVersion=mcVersion,
+            modCategory=modCategory,
+            sortType=sortType,
+            sortFilter=sortFilter,
+            modClassId=schemas.MinecraftClassId.Mod,
+            sortOrder=schemas.SortOrder.Descending,
+            index=0,
+            pageSize=20
+        )
+
+    def searchMod(self):
+        self.clearWidget()
+        future = self.minecraftModSearchManager.asyncSearchMod(self.getCurrentSearchBody())
+        future.done.connect(self.onSearchModDone)
+
+    def clearWidget(self):
+        while self.resultScrollAreaWidgetContents.layout().count():
+            item = self.resultScrollAreaWidgetContents.layout().takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+    @pyqtSlot(object)
+    def onSearchModDone(self, mods: List[schemas.Mod]):
+        for mod in mods:
+            widget = SingleModWidget.getWidget(mod, parent=self.resultScrollArea)
+            self.resultScrollAreaWidgetContents.layout().addWidget(widget)
+            self.fetchImageManager.asyncFetch(
+                url=mod.logo.thumbnailUrl,
+                target=widget.ModImageRef,
+                timeout=3,
+            )
+
+    def setupUI(self):
         self.setObjectName("PlazaPage")
 
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -202,6 +292,7 @@ class PlazaPage(QWidget):
         self.resultScrollAreaWidgetContents.setObjectName(
             "resultScrollAreaWidgetContents"
         )
+        self.resultScrollAreaWidgetContents.setLayout(QVBoxLayout())
 
         self.resultScrollArea.setWidget(self.resultScrollAreaWidgetContents)
         self.gridLayout.addWidget(self.resultScrollArea, 4, 1, 1, 3)
@@ -213,4 +304,5 @@ class PlazaPage(QWidget):
         self.modTypeTitle.setText("分类      ")
         self.SearchLineEdit.setPlaceholderText("支持中英文搜索")
 
-
+        #
+        self.SearchLineEdit.setEnabled(False)

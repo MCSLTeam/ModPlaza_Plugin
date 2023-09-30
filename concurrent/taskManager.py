@@ -3,8 +3,8 @@ from typing import Dict
 
 from PyQt5.QtCore import QThreadPool, QObject
 
-from Plugins.Mod_Plaza.cocurrent.future import Future
-from Plugins.Mod_Plaza.cocurrent.task import Task
+from Plugins.Mod_Plaza.concurrent.future import Future
+from Plugins.Mod_Plaza.concurrent.task import Task
 
 
 class TaskManager(QObject):

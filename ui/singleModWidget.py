@@ -8,10 +8,48 @@ from qfluentwidgets import (
     StrongBodyLabel,
 )
 
+from Plugins.Mod_Plaza.curseforge import SchemaClasses as schemas
+
 
 class SingleModWidget(ElevatedCardWidget):
-    def __init__(self, parent):
+    def __init__(self, mod: schemas.Mod, parent):
         super().__init__(parent=parent)
+        self.setupUi()
+
+        self.__mod = mod
+
+    @staticmethod
+    def getStructDownloadCount(count: int):
+        if count < 1000:
+            return str(count)
+        elif count < 1_000_000:
+            return f"{count / 1000:.2f}K"
+        else:
+            return f"{count / 1_000_000:.2f}M"
+
+    @property
+    def Mod(self) -> schemas.Mod:
+        return self.__mod
+
+    @property
+    def ModImageRef(self):
+        return self.PixmapLabel
+
+    @staticmethod
+    def getWidget(
+            mod: schemas.Mod,
+            parent=None
+    ) -> 'SingleModWidget':
+        widget = SingleModWidget(mod=mod, parent=parent)
+        widget.modName.setText(mod.name)
+        widget.modDescription.setText(mod.summary)
+        widget.version.setText(mod.latestFilesIndexes[0].gameVersion)
+        widget.download.setText(SingleModWidget.getStructDownloadCount(mod.downloadCount))
+        widget.lastUpdate.setText(str(mod.dateModified.date()))
+        widget.modSrc.setText("&".join([author.name for author in mod.authors]))
+        return widget
+
+    def setupUi(self):
         self.setObjectName("singleModWidget")
 
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -252,7 +290,7 @@ class SingleModWidget(ElevatedCardWidget):
         self.versionTag.setText("版本")
         self.downloadTag.setText("下载")
         self.lastUpdateTag.setText("最近更新")
-        self.modSrcTag.setText("来源")
+        self.modSrcTag.setText("作者")
         # self.modName.setText("[模组名称]")
         # self.modDescription.setText("[模组介绍]")
         # self.version.setText("[版本]")
