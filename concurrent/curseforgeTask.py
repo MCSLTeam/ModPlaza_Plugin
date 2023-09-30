@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from Plugins.Mod_Plaza.concurrent import Task, TaskManager, Future
 from Plugins.Mod_Plaza.curseforge import CurseForgeAPI, SchemaClasses as schemas
@@ -6,11 +7,11 @@ from Plugins.Mod_Plaza.curseforge import CurseForgeAPI, SchemaClasses as schemas
 
 @dataclass
 class CurseForgeSearchBody:
-    minecraftVersion: schemas.MinecraftGameVersion
-    modClassId: int
-    modCategory: schemas.Category
-    sortType: schemas.ModSearchSortField
-    sortFilter: str
+    gameVersion: Optional[schemas.MinecraftGameVersion]
+    classId: int
+    categoryId: Optional[schemas.Category]
+    sortField: Optional[schemas.ModSearchSortField]
+    searchFilter: str
     sortOrder: schemas.SortOrder
     index: int
     pageSize: int
@@ -49,10 +50,11 @@ class MinecraftModSearchTask(Task):
         search = self.searchBody
         data = cf.searchMods(
             gameId=432,
-            classId=search.modClassId,
-            categoryId=search.modCategory.id,
-            sortField=search.sortType,
-            gameVersion=search.minecraftVersion.versionString,
+            gameVersion=search.gameVersion.versionString if search.gameVersion else None,
+            categoryId=search.categoryId.id if search.categoryId else None,
+            classId=search.classId,
+            sortField=search.sortField,
+            searchFilter=search.searchFilter,
             sortOrder=search.sortOrder,
             index=search.index,
             pageSize=search.pageSize
@@ -96,6 +98,10 @@ class MinecraftModSearchManager(TaskManager):
             search=searchBody
         )
         self._taskRun(task, future)
+        for d in searchBody.__dict__:
+            if d.startswith("_"):
+                continue
+            print(d, getattr(searchBody, d))
         return future
 
     def _taskDone(self, fut: Future):

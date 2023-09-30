@@ -1,6 +1,7 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from PyQt5.QtCore import QSize, Qt, QRect, pyqtSlot
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import (
     QWidget,
     QSizePolicy,
@@ -34,6 +35,7 @@ class PlazaPage(QWidget):
         self.setupUI()
         # mod repository
         self.searchSrcComboBox.addItem("CurseForge")
+        self.sortTypeComboBox.addItem("Any")
         self.sortTypeComboBox.addItems(schemas.ModSearchSortField._member_names_)
 
         # curseforge
@@ -44,11 +46,12 @@ class PlazaPage(QWidget):
 
         self.minecraftInfoManager.asyncGetMinecraftInfo().done.connect(self.getCurseForgeInfo)
         # data structure
-        self.minecraftVersionMap: Dict[str, schemas.MinecraftGameVersion] = {}
-        self.modCategoryMap: Dict[str, schemas.Category] = {}
-        self.sortBodyMap: Dict[str, schemas.ModSearchSortField] = {
+        self.minecraftVersionMap: Dict[str, Optional[schemas.MinecraftGameVersion]] = {"Any": None}
+        self.modCategoryMap: Dict[str, Optional[schemas.Category]] = {"Any": None}
+        self.sortFieldMap: Dict[str, Optional[schemas.ModSearchSortField]] = {
             name: schemas.ModSearchSortField[name].value for name in schemas.ModSearchSortField._member_names_
         }
+        self.sortFieldMap["Any"] = None
 
         # connect
         self.SearchLineEdit.returnPressed.connect(self.searchMod)
@@ -58,10 +61,13 @@ class PlazaPage(QWidget):
     def getCurseForgeInfo(self, data):
         minecraftVersions: List[schemas.MinecraftGameVersion] = data["minecraftVersions"]
         modCategories: List[schemas.Category] = getStructureCategories(data["modCategories"], 6)  # Mod
+
+        self.mcVersionComboBox.addItem("Any")
         for mcVersion in minecraftVersions:
             self.minecraftVersionMap[mcVersion.versionString] = mcVersion
             self.mcVersionComboBox.addItem(mcVersion.versionString)
 
+        self.modTypeComboBox.addItem("Any")
         for root in modCategories:
             self.modCategoryMap[root.name] = root
             self.modTypeComboBox.addItem(root.name)
@@ -75,14 +81,14 @@ class PlazaPage(QWidget):
     def getCurrentSearchBody(self) -> CurseForgeSearchBody:
         mcVersion = self.minecraftVersionMap[self.mcVersionComboBox.currentText()]
         modCategory = self.modCategoryMap[self.modTypeComboBox.currentText()]
-        sortType = self.sortBodyMap[self.sortTypeComboBox.currentText()]
+        sortType = self.sortFieldMap[self.sortTypeComboBox.currentText()]
         sortFilter = self.SearchLineEdit.text().strip()
         return CurseForgeSearchBody(
-            minecraftVersion=mcVersion,
-            modCategory=modCategory,
-            sortType=sortType,
-            sortFilter=sortFilter,
-            modClassId=schemas.MinecraftClassId.Mod,
+            gameVersion=mcVersion,
+            categoryId=modCategory,
+            sortField=sortType,
+            searchFilter=sortFilter,
+            classId=schemas.MinecraftClassId.Mod,
             sortOrder=schemas.SortOrder.Descending,
             index=0,
             pageSize=20
@@ -103,11 +109,13 @@ class PlazaPage(QWidget):
     def onSearchModDone(self, mods: List[schemas.Mod]):
         for mod in mods:
             widget = SingleModWidget.getWidget(mod, parent=self.resultScrollArea)
+            widget.ModImageRef.setPixmap(QPixmap(96, 96)) # set blank image
+
             self.resultScrollAreaWidgetContents.layout().addWidget(widget)
             self.fetchImageManager.asyncFetch(
                 url=mod.logo.thumbnailUrl,
                 target=widget.ModImageRef,
-                timeout=3,
+                timeout=10,
             )
 
     def setupUI(self):

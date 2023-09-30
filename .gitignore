@@ -5,3 +5,4 @@ CFAPI.py
 # cache
 **/__pycache__
 cache
+.idea
