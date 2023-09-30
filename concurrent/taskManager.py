@@ -47,8 +47,12 @@ class TaskManager(QObject):
         _id = fut.getTaskID()
         task = self.tasks[_id]()
         if task is not None:
-            self.threadPool.cancel(task)
-            print(f"Task {_id} canceled.")
+            try:
+                self.threadPool.cancel(task)
+                print(f"Task {_id} canceled.")
+            except RuntimeError:
+                print(f"Task {_id} already done.")
+
 
     def cancelTask(self, fut: Future):
         self._taskCancel(fut)

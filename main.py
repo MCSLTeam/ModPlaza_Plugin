@@ -3,6 +3,7 @@ import sys
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
 
+from Plugins.Mod_Plaza.Clients import vacuum
 from ui.plazaPage import PlazaPage
 
 if __name__ == '__main__':

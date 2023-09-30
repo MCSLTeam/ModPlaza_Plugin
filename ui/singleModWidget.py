@@ -3,15 +3,15 @@ from PyQt5.QtWidgets import QWidget, QSizePolicy, QGridLayout, QHBoxLayout, QSpa
 from qfluentwidgets import (
     BodyLabel,
     CaptionLabel,
-    ElevatedCardWidget,
     PixmapLabel,
     StrongBodyLabel,
+    CardWidget,
 )
 
 from Plugins.Mod_Plaza.curseforge import SchemaClasses as schemas
 
 
-class SingleModWidget(ElevatedCardWidget):
+class SingleModWidget(CardWidget):
     def __init__(self, mod: schemas.Mod, parent):
         super().__init__(parent=parent)
         self.setupUi()
@@ -40,7 +40,8 @@ class SingleModWidget(ElevatedCardWidget):
             mod: schemas.Mod,
             parent=None
     ) -> 'SingleModWidget':
-        gameVersion = mod.latestFilesIndexes[0].gameVersion if mod.latestFilesIndexes else "-".join(mod.latestFiles[0].gameVersions)
+        gameVersion = mod.latestFilesIndexes[0].gameVersion if mod.latestFilesIndexes else "-".join(
+            mod.latestFiles[0].gameVersions)
 
         widget = SingleModWidget(mod=mod, parent=parent)
         widget.modName.setText(mod.name)

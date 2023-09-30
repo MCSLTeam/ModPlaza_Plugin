@@ -49,8 +49,9 @@ class FutureCancelled(FutureError):
 
 
 class Future(QObject):
-    done = pyqtSignal(object)
-    childrenDone = pyqtSignal(object)
+    allDone = pyqtSignal(object)  # self
+    partialDone = pyqtSignal(object)  # child future
+    childrenDone = pyqtSignal(object)  # self
 
     def __init__(self):
         super().__init__()
@@ -72,6 +73,7 @@ class Future(QObject):
         if childFuture.isFailed():
             self._failed = True
         self._counter += 1
+        self.partialDone.emit(childFuture)
         try:
             idx = getattr(childFuture, "_idx")
             self._result[idx] = childFuture._result
@@ -113,7 +115,7 @@ class Future(QObject):
                 self.childrenDone.emit(self)
             if self._callback:
                 self._callback(result)
-            self.done.emit(result)
+            self.allDone.emit(result)
         else:
             raise RuntimeError("Future already done")
         # self.deleteLater()  # delete this future object
@@ -131,7 +133,7 @@ class Future(QObject):
                 self.childrenDone.emit(self)
             if self._failedCallback:
                 self._failedCallback(self)
-            self.done.emit(self._result)
+            self.allDone.emit(self._result)
         else:
             raise RuntimeError("Future already done")
         # self.deleteLater()

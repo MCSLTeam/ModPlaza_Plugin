@@ -1,6 +1,5 @@
-import json
 import os
-from typing import List
+import sqlite3
 
 import requests_cache as rqc
 
@@ -9,10 +8,25 @@ from Plugins.Mod_Plaza.curseforge import CurseForgeAPI, SchemaClasses as schema
 
 curdir = os.path.abspath(os.path.dirname(__file__))
 
+
+def vacuum():
+    if os.path.exists(db := os.path.join(curdir, "cache", "CurseForgeBlob-Cache")):
+        conn = sqlite3.connect(db)
+        conn.execute("VACUUM")
+        conn.close()
+        print("Vacuumed")
+
+    if os.path.exists(db := os.path.join(curdir, "cache", "CurseForgeRequest-Cache")):
+        conn = sqlite3.connect(db)
+        conn.execute("VACUUM")
+        conn.close()
+        print("Vacuumed")
+
+
 shortCachedRequest = rqc.CachedSession(
     os.path.join(curdir, "cache", "CurseForgeRequest-Cache"),
     backend="sqlite",
-    expire_after=300
+    expire_after=3600
 )
 longCachedRequest = rqc.CachedSession(
     os.path.join(curdir, "cache", "CurseForgeBlob-Cache"),
@@ -49,4 +63,3 @@ if __name__ == '__main__':
     for d in data:
         print(d)
     print(666)
-

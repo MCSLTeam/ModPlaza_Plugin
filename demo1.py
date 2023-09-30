@@ -101,7 +101,7 @@ class Window(QMainWindow):
             failedCallback=lambda _: print(f"单个加载失败,url={_.url}", _.getException())
         )
         future.setFailedCallback(lambda _: print("加载失败,failedCallback", _.getException()))
-        future.done.connect(self.onFutureDone)
+        future.allDone.connect(self.onFutureDone)
         self.fut = future
 
     def onFutureDone(self, result):

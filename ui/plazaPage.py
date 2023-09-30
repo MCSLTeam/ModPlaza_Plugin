@@ -17,7 +17,7 @@ from qfluentwidgets import (
     SimpleCardWidget,
     SmoothScrollArea,
     StrongBodyLabel,
-    TitleLabel,
+    TitleLabel, TransparentPushButton, BodyLabel,
 )
 
 import Plugins.Mod_Plaza.curseforge.SchemaClasses as schemas
@@ -33,10 +33,22 @@ CLASS_ID = schemas.MinecraftClassId.BukkitPlugin
 CLASS_NAME = CLASS_ID.name
 
 
+class PageLineEdit(SearchLineEdit):
+    def __init__(self, parent):
+        super().__init__(parent=parent)
+
+    def focusInEvent(self, e):
+        self.setText("")
+        super().focusInEvent(e)
+
+
 class PlazaPage(QWidget):
     def __init__(self, parent):
         super().__init__(parent=parent)
         self.setupUI()
+        # UI
+        self.pageLineEdit.setAlignment(Qt.AlignCenter)
+
         # mod repository
         self.searchSrcComboBox.addItem("CurseForge")
         self.sortTypeComboBox.addItem("Any")
@@ -48,7 +60,7 @@ class PlazaPage(QWidget):
         self.minecraftModSearchManager = MinecraftModSearchManager(CfClient)
         self.fetchImageManager = FetchImageManager()
 
-        self.minecraftInfoManager.asyncGetMinecraftInfo().done.connect(self.getCurseForgeInfo)
+        self.minecraftInfoManager.asyncGetMinecraftInfo().allDone.connect(self.getCurseForgeInfo)
         # data structure
         self.minecraftVersionMap: Dict[str, Optional[schemas.MinecraftGameVersion]] = {"Any": None}
         self.modCategoryMap: Dict[str, Optional[schemas.Category]] = {"Any": None}
@@ -59,12 +71,19 @@ class PlazaPage(QWidget):
         self.sortFieldMap["Any"] = None
 
         # connect
-        self.SearchLineEdit.returnPressed.connect(self.searchMod)
-        self.SearchLineEdit.searchButton.clicked.connect(self.searchMod)
+        self.SearchLineEdit.returnPressed.connect(self.onSearchRequested)
+        self.SearchLineEdit.searchButton.clicked.connect(self.onSearchRequested)
+        self.nextPageButton.clicked.connect(self.nextPage)
+        self.previousPageButton.clicked.connect(self.previousPage)
         self.classID = CLASS_ID
 
         # other
         self.lastPageTaskFuture: Optional[Future] = None
+        self.currentPage = 1
+        self.maxPage = 1
+        self.maxPageSize = 50
+        self.pageSize = 0
+        self.thumbnailImages = 0
 
     @pyqtSlot(object)
     def getCurseForgeInfo(self, data):
@@ -122,14 +141,61 @@ class PlazaPage(QWidget):
             searchFilter=sortFilter,
             classId=self.classID.value,
             sortOrder=schemas.SortOrder.Descending,
-            index=0,
-            pageSize=50
+            index=(self.currentPage - 1) * self.maxPageSize,
+            pageSize=self.maxPageSize
         )
 
+    def nextPage(self):
+        if self.currentPage < self.maxPage:
+            self.currentPage += 1
+            self.pageLineEdit.setText(f"{self.currentPage} / {self.maxPage}")
+            self.searchMod()
+
+    def previousPage(self):
+        if self.currentPage > 1:
+            self.currentPage -= 1
+            self.pageLineEdit.setText(f"{self.currentPage} / {self.maxPage}")
+            self.searchMod()
+
+    def jumpToPage(self):
+        try:
+            page = int(self.pageLineEdit.text().strip())
+            if 1 <= page <= self.maxPage:
+                self.currentPage = page
+                self.pageLineEdit.clearFocus()
+                self.pageLineEdit.setText(f"{self.currentPage} / {self.maxPage}")
+                self.searchMod()
+        except ValueError:
+            self.pageLineEdit.clearFocus()
+            self.pageLineEdit.setText(f"{self.currentPage} / {self.maxPage}")
+
+    def jumpToPageByEnter(self):
+        if self.pageLineEdit.hasFocus():
+            self.jumpToPage()
+
+    def onSearchRequested(self):
+        self.currentPage = 1
+        self.pageLineEdit.setText(f"{self.currentPage} / NaN")
+        self.searchMod()
+
     def searchMod(self):
+        # cancel last page task
+        if (fut := self.lastPageTaskFuture) is not None:
+            if not fut.isDone():
+                self.fetchImageManager.cancelTask(self.lastPageTaskFuture)
+                try:
+                    fut.allDone.disconnect()
+                    fut.partialDone.disconnect()
+                except TypeError:  # 上次搜索无结果
+                    pass
+                print("Canceled last page task.")
+            self.lastPageTaskFuture.deleteLater()  # delete last page task
+        self.thumbnailImages = 0
+
+        self.titleLabel.setText(f"{CLASS_NAME}广场 (正在搜索...)")
         self.clearWidget()
         future = self.minecraftModSearchManager.asyncSearchMod(self.getCurrentSearchBody())
-        future.done.connect(self.onSearchModDone)
+        future.allDone.connect(self.onSearchModDone)
 
     def clearWidget(self):
         while self.resultScrollAreaWidgetContents.layout().count():
@@ -140,6 +206,9 @@ class PlazaPage(QWidget):
     @pyqtSlot(object)
     def onSearchModDone(self, response: schemas.SearchModsResponse):
         mods = response.data
+        self.pageSize = response.pagination.resultCount
+        self.maxPage = response.pagination.totalCount // self.maxPageSize + 1
+        self.pageLineEdit.setText(f"{self.currentPage} / {self.maxPage}")
         widgets = []
         for mod in mods:
             widget = SingleModWidget.getWidget(mod, parent=self.resultScrollArea)
@@ -147,18 +216,23 @@ class PlazaPage(QWidget):
             self.resultScrollAreaWidgetContents.layout().addWidget(widget)
             widgets.append(widget)
 
-        if (fut := self.lastPageTaskFuture) is not None:
-            if not fut.isDone():
-                self.fetchImageManager.cancelTask(self.lastPageTaskFuture)
-            self.lastPageTaskFuture.deleteLater()  # delete last page task
         fut = self.fetchImageManager.asyncFetchMultiple(
             tasks=[(w.Mod.logo.thumbnailUrl if w.Mod.logo else None, w.ModImageRef)
                    for w in widgets if isinstance(w, SingleModWidget)],
             timeout=10,
             verify=False
         )
-        fut: Future
+        if len(mods) == 0:
+            self.titleLabel.setText(f"{CLASS_NAME}广场 (无结果)")
+        else:
+            self.titleLabel.setText(f"{CLASS_NAME}广场 (正在加载缩略图...)")
+            fut.allDone.connect(lambda _: self.titleLabel.setText(f"{CLASS_NAME}广场"))
+            fut.partialDone.connect(self.onThumbnailsPartialFetched)
         self.lastPageTaskFuture = fut
+
+    def onThumbnailsPartialFetched(self, fut: Future):
+        self.thumbnailImages += 1
+        self.titleLabel.setText(f"{CLASS_NAME}广场 (正在加载缩略图... {self.thumbnailImages}/{self.pageSize})")
 
     def setupUI(self):
         self.setObjectName("PlazaPage")
@@ -323,13 +397,14 @@ class PlazaPage(QWidget):
         self.gridLayout_2.addWidget(self.modTypeWidget, 1, 6, 1, 1)
         self.SearchLineEdit = SearchLineEdit(self.searchWidget)
         self.SearchLineEdit.setObjectName("SearchLineEdit")
-
         self.gridLayout_2.addWidget(self.SearchLineEdit, 4, 0, 1, 7)
         self.gridLayout.addWidget(self.searchWidget, 3, 1, 1, 3)
+
         spacerItem3 = QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.gridLayout.addItem(spacerItem3, 0, 1, 1, 3)
         spacerItem4 = QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.gridLayout.addItem(spacerItem4, 2, 1, 1, 3)
+
         self.resultScrollArea = SmoothScrollArea(self)
         self.resultScrollArea.setFrameShape(QFrame.NoFrame)
         self.resultScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -347,12 +422,42 @@ class PlazaPage(QWidget):
         self.resultScrollArea.setWidget(self.resultScrollAreaWidgetContents)
         self.gridLayout.addWidget(self.resultScrollArea, 4, 1, 1, 3)
 
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName("horizontalLayout_5")
+        self.spaceItem5 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalLayout_5.addItem(self.spaceItem5)
+
+        self.previousPageButton = TransparentPushButton(self)
+        self.previousPageButton.setObjectName("previousPageButton")
+        self.horizontalLayout_5.addWidget(self.previousPageButton)
+        self.pageLineEdit = BodyLabel(self)
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pageLineEdit.sizePolicy().hasHeightForWidth())
+        self.pageLineEdit.setSizePolicy(sizePolicy)
+        self.pageLineEdit.setMinimumSize(QSize(80, 33))
+        self.pageLineEdit.setMaximumSize(QSize(80, 33))
+        self.pageLineEdit.setObjectName("PageLineEdit")
+        self.horizontalLayout_5.addWidget(self.pageLineEdit)
+        self.nextPageButton = TransparentPushButton(self)
+        self.nextPageButton.setObjectName("nextPageButton")
+        self.horizontalLayout_5.addWidget(self.nextPageButton)
+        self.spaceItem6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_5.addItem(self.spaceItem5)
+
+        self.gridLayout.addLayout(self.horizontalLayout_5, 5, 1, 1, 3)
+
         self.titleLabel.setText(f"{CLASS_NAME}广场")
         self.sortTypeTitle.setText("排序方式        ")
         self.mcVersionTitle.setText("Minecraft版本")
         self.searchSrcTitle.setText("搜索源  ")
         self.modTypeTitle.setText("分类      ")
         self.SearchLineEdit.setPlaceholderText("支持中英文搜索")
+        self.previousPageButton.setText("上一页")
+        self.pageLineEdit.setText("页码")
+        self.nextPageButton.setText("下一页")
 
         #
         self.SearchLineEdit.setEnabled(False)
