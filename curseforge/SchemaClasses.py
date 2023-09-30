@@ -130,6 +130,7 @@ class Category(Base):
         self.classId: int | None = int(classId) if classId is not None else None
         self.parentCategoryId: int | None = int(parentCategoryId) if parentCategoryId is not None else None
         self.displayIndex: int | None = int(displayIndex) if displayIndex is not None else None
+        self.children: List[Category] = []
 
 
 # CoreApiStatus Schema
@@ -711,8 +712,9 @@ data 	[Category] 	The response data
 
 # GetCategoriesResponse Class
 class GetCategoriesResponse(Base):
-    def __init__(self, data: Category):
-        self.data: Category = Category(**data) if isinstance(data, dict) else data
+    def __init__(self, data: List[Category]):
+        # self.data: List[Category] = Category(**data) if isinstance(data, dict) else data
+        self.data: List[Category] = list(map(lambda x: Category(**x) if isinstance(x, dict) else x, data))
 
 
 # GetFeaturedModsResponse Schema

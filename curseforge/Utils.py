@@ -1,5 +1,7 @@
+from typing import List
+
 from .CFAPI import CurseForgeAPI
-from .SchemaClasses import FileReleaseType, ApiResponseCode
+from .SchemaClasses import FileReleaseType, ApiResponseCode, Category
 
 
 def downloadFileFromURL(self: CurseForgeAPI, url: str, filename: str):
@@ -25,3 +27,12 @@ def downloadFileFromModIDVersion(self: CurseForgeAPI, modID: str, version: str, 
         if version in file.gameVersions and (file.releaseType == releaseType or not releaseType):
             return downloadFileFromURL(file['downloadUrl'], filename)
     raise Exception('Version not found matching the given release type.')
+
+
+def getStructureCategories(categories: List[Category], classID: int) -> List[Category]:
+    _map = {c.id: c for c in categories}
+    roots = [c for c in categories if c.parentCategoryId == classID]
+    for c in categories:
+        if c.parentCategoryId != classID:
+            _map[c.parentCategoryId].children.append(c)
+    return roots

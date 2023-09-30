@@ -1,40 +1,15 @@
 from typing import Callable, List, Tuple, Optional, Dict
 
-from PyQt5.QtCore import QThreadPool, QObject
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QWidget
 
-from Plugins.Mod_Plaza.cocurrent.fetchImageTask import FetchImageTask
-from Plugins.Mod_Plaza.cocurrent.future import Future
-from Plugins.Mod_Plaza.cocurrent.task import Task
-
-
-class TaskManager(QObject):
-    def __init__(self):
-        super().__init__()
-        self.threadPool = QThreadPool()
-        self.threadPool.setMaxThreadCount(4)
-        self.taskMap = {}
-        self.taskCounter = 0
-
-    def _taskRun(self, task: Task, future: Future, **kwargs):
-        future.setTaskID(self.taskCounter)
-
-        task.signal.finished.connect(self._taskDone)
-        self.threadPool.start(task)
-        self.taskCounter += 1
-
-    def _taskDone(self, fut: Future):
-        """
-        need manually set Future.setFailed() or Future.setResult() to be called!!!
-        """
-        raise NotImplemented
+from Plugins.Mod_Plaza.cocurrent import TaskManager, Task, Future, FetchImageTask
 
 
 class FetchImageManager(TaskManager):
 
-    def __init__(self, cache):
-        super().__init__()
+    def __init__(self, cache, useGlobalThreadPool=False):
+        super().__init__(useGlobalThreadPool)
         self.threadPool.setMaxThreadCount(16)
         self.cache = cache
 
