@@ -22,11 +22,15 @@ from qfluentwidgets import (
 
 import Plugins.Mod_Plaza.curseforge.SchemaClasses as schemas
 from Plugins.Mod_Plaza.Clients import CfClient
+from Plugins.Mod_Plaza.concurrent import Future
 from Plugins.Mod_Plaza.concurrent.curseforgeTask import GetMinecraftInfoManager, CurseForgeSearchBody, \
     MinecraftModSearchManager
 from Plugins.Mod_Plaza.curseforge.Utils import getStructureCategories
 from Plugins.Mod_Plaza.ui.singleModWidget import SingleModWidget
 from Plugins.Mod_Plaza.utils.FetchImageManager import FetchImageManager
+
+CLASS_ID = schemas.MinecraftClassId.Mod
+CLASS_NAME = CLASS_ID.name
 
 
 class PlazaPage(QWidget):
@@ -48,6 +52,7 @@ class PlazaPage(QWidget):
         # data structure
         self.minecraftVersionMap: Dict[str, Optional[schemas.MinecraftGameVersion]] = {"Any": None}
         self.modCategoryMap: Dict[str, Optional[schemas.Category]] = {"Any": None}
+        self.pluginCategoryMap: Dict[str, Optional[schemas.Category]] = {"Any": None}
         self.sortFieldMap: Dict[str, Optional[schemas.ModSearchSortField]] = {
             name: schemas.ModSearchSortField[name].value for name in schemas.ModSearchSortField._member_names_
         }
@@ -56,39 +61,66 @@ class PlazaPage(QWidget):
         # connect
         self.SearchLineEdit.returnPressed.connect(self.searchMod)
         self.SearchLineEdit.searchButton.clicked.connect(self.searchMod)
+        self.classID = CLASS_ID
+
+        # other
+        self.lastPageTaskFuture: Optional[Future] = None
 
     @pyqtSlot(object)
     def getCurseForgeInfo(self, data):
         minecraftVersions: List[schemas.MinecraftGameVersion] = data["minecraftVersions"]
         modCategories: List[schemas.Category] = getStructureCategories(data["modCategories"], 6)  # Mod
+        pluginCategories: List[schemas.Category] = getStructureCategories(data["pluginCategories"], 5)  # Plugin
 
+        # REGION
         self.mcVersionComboBox.addItem("Any")
         for mcVersion in minecraftVersions:
             self.minecraftVersionMap[mcVersion.versionString] = mcVersion
             self.mcVersionComboBox.addItem(mcVersion.versionString)
+        # ENDREGION
 
+        # REGION
         self.modTypeComboBox.addItem("Any")
-        for root in modCategories:
-            self.modCategoryMap[root.name] = root
-            self.modTypeComboBox.addItem(root.name)
-            if root.children:
-                for child in root.children:
-                    name = f"{root.name} > {child.name}"
-                    self.modCategoryMap[name] = child
-                    self.modTypeComboBox.addItem(name)
+        if self.classID == schemas.MinecraftClassId.Mod:
+
+            for root in modCategories:
+                self.modCategoryMap[root.name] = root
+                self.modTypeComboBox.addItem(root.name)
+                if root.children:
+                    for child in root.children:
+                        name = f"{root.name} > {child.name}"
+                        self.modCategoryMap[name] = child
+                        self.modTypeComboBox.addItem(name)
+
+        elif self.classID == schemas.MinecraftClassId.BukkitPlugin:
+            for root in pluginCategories:
+                self.pluginCategoryMap[root.name] = root
+                self.modTypeComboBox.addItem(root.name)
+                if root.children:
+                    for child in root.children:
+                        name = f"{root.name} > {child.name}"
+                        self.pluginCategoryMap[name] = child
+                        self.modTypeComboBox.addItem(name)
+        # ENDREGION
+
         self.SearchLineEdit.setEnabled(True)
 
     def getCurrentSearchBody(self) -> CurseForgeSearchBody:
+        category = None
+        if self.classID == schemas.MinecraftClassId.Mod:
+            category = self.modCategoryMap[self.modTypeComboBox.currentText()]
+        elif self.classID == schemas.MinecraftClassId.BukkitPlugin:
+            category = self.pluginCategoryMap[self.modTypeComboBox.currentText()]
+
         mcVersion = self.minecraftVersionMap[self.mcVersionComboBox.currentText()]
-        modCategory = self.modCategoryMap[self.modTypeComboBox.currentText()]
         sortType = self.sortFieldMap[self.sortTypeComboBox.currentText()]
         sortFilter = self.SearchLineEdit.text().strip()
         return CurseForgeSearchBody(
             gameVersion=mcVersion,
-            categoryId=modCategory,
+            categoryId=category,
             sortField=sortType,
             searchFilter=sortFilter,
-            classId=schemas.MinecraftClassId.Mod,
+            classId=self.classID.value,
             sortOrder=schemas.SortOrder.Descending,
             index=0,
             pageSize=20
@@ -106,17 +138,21 @@ class PlazaPage(QWidget):
                 item.widget().deleteLater()
 
     @pyqtSlot(object)
-    def onSearchModDone(self, mods: List[schemas.Mod]):
+    def onSearchModDone(self, response: schemas.SearchModsResponse):
+        mods = response.data
         for mod in mods:
             widget = SingleModWidget.getWidget(mod, parent=self.resultScrollArea)
-            widget.ModImageRef.setPixmap(QPixmap(96, 96)) # set blank image
-
+            widget.ModImageRef.setPixmap(QPixmap(96, 96))  # set blank image
             self.resultScrollAreaWidgetContents.layout().addWidget(widget)
-            self.fetchImageManager.asyncFetch(
-                url=mod.logo.thumbnailUrl,
-                target=widget.ModImageRef,
-                timeout=10,
-            )
+
+        widgets = self.resultScrollAreaWidgetContents.layout().children()
+        fut = self.fetchImageManager.asyncFetchMultiple(
+            tasks=[(w.Mod.logo.thumbnailUrl if w.Mod.logo else None, w.ModImageRef)
+                   for w in widgets if isinstance(w, SingleModWidget)],
+            timeout=10
+        )
+        self.lastPageTaskFuture.deleteLater()  # delete last page task
+        self.lastPageTaskFuture = fut
 
     def setupUI(self):
         self.setObjectName("PlazaPage")
@@ -305,7 +341,7 @@ class PlazaPage(QWidget):
         self.resultScrollArea.setWidget(self.resultScrollAreaWidgetContents)
         self.gridLayout.addWidget(self.resultScrollArea, 4, 1, 1, 3)
 
-        self.titleLabel.setText("Mod广场")
+        self.titleLabel.setText(f"{CLASS_NAME}广场")
         self.sortTypeTitle.setText("排序方式        ")
         self.mcVersionTitle.setText("Minecraft版本")
         self.searchSrcTitle.setText("搜索源  ")

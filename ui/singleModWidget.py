@@ -40,10 +40,12 @@ class SingleModWidget(ElevatedCardWidget):
             mod: schemas.Mod,
             parent=None
     ) -> 'SingleModWidget':
+        gameVersion = mod.latestFilesIndexes[0].gameVersion if mod.latestFilesIndexes else "-".join(mod.latestFiles[0].gameVersions)
+
         widget = SingleModWidget(mod=mod, parent=parent)
         widget.modName.setText(mod.name)
         widget.modDescription.setText(mod.summary)
-        widget.version.setText(mod.latestFilesIndexes[0].gameVersion)
+        widget.version.setText(gameVersion)
         widget.download.setText(SingleModWidget.getStructDownloadCount(mod.downloadCount))
         widget.lastUpdate.setText(str(mod.dateModified.date()))
         widget.modSrc.setText("&".join([author.name for author in mod.authors]))

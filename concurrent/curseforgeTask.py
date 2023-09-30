@@ -26,9 +26,14 @@ class GetMinecraftInfoTask(Task):
     def run(self):
         cf = self.cfClient
         modCategories = cf.getCategories(432, schemas.MinecraftClassId.Mod).data
+        pluginCategories = cf.getCategories(432, schemas.MinecraftClassId.BukkitPlugin).data
         minecraftVersions = cf.getMinecraftVersions(True).data
 
-        self._taskDone(modCategories=modCategories, minecraftVersions=minecraftVersions)
+        self._taskDone(
+            modCategories=modCategories,
+            minecraftVersions=minecraftVersions,
+            pluginCategories=pluginCategories
+        )
 
 
 class MinecraftModSearchTask(Task):
@@ -48,7 +53,7 @@ class MinecraftModSearchTask(Task):
     def run(self) -> None:
         cf = self.cfClient
         search = self.searchBody
-        data = cf.searchMods(
+        response = cf.searchMods(
             gameId=432,
             gameVersion=search.gameVersion.versionString if search.gameVersion else None,
             categoryId=search.categoryId.id if search.categoryId else None,
@@ -58,8 +63,8 @@ class MinecraftModSearchTask(Task):
             sortOrder=search.sortOrder,
             index=search.index,
             pageSize=search.pageSize
-        ).data
-        self._taskDone(mods=data)
+        )
+        self._taskDone(response=response)
 
 
 class GetMinecraftInfoManager(TaskManager):
@@ -80,7 +85,8 @@ class GetMinecraftInfoManager(TaskManager):
     def _taskDone(self, fut: Future):
         fut.setResult({
             "modCategories": fut.getExtra("modCategories"),
-            "minecraftVersions": fut.getExtra("minecraftVersions")
+            "minecraftVersions": fut.getExtra("minecraftVersions"),
+            "pluginCategories": fut.getExtra("pluginCategories")
         })
 
 
@@ -106,5 +112,5 @@ class MinecraftModSearchManager(TaskManager):
 
     def _taskDone(self, fut: Future):
         fut.setResult(
-            fut.getExtra("mods")
+            fut.getExtra("response")
         )

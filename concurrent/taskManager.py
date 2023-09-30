@@ -1,9 +1,9 @@
 import weakref
-from typing import Dict
+from typing import Dict, List
 
 from PyQt5.QtCore import QThreadPool, QObject
 
-from Plugins.Mod_Plaza.concurrent.future import Future
+from Plugins.Mod_Plaza.concurrent.future import Future, FutureCancelled
 from Plugins.Mod_Plaza.concurrent.task import Task
 
 
@@ -34,10 +34,21 @@ class TaskManager(QObject):
         raise NotImplemented
 
     def _taskCancel(self, fut: Future):
+        stack: List[Future] = []
+        stack.extend(fut.getChildren())
+        while stack:
+            f = stack.pop()
+            if not f.hasChildren() and not f.isDone():
+                self._taskSingleCancel(f)
+                f.setFailed(FutureCancelled())
+            stack.extend(f.getChildren())
+
+    def _taskSingleCancel(self, fut: Future):
         _id = fut.getTaskID()
         task = self.tasks[_id]()
         if task is not None:
             self.threadPool.cancel(task)
+            print(f"Task {_id} canceled.")
 
     def cancelTask(self, fut: Future):
         self._taskCancel(fut)

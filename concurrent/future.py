@@ -37,6 +37,17 @@ class GatheredFutureFailed(FutureError):
         return len(self.failures)
 
 
+class FutureCancelled(FutureError):
+    def __init__(self):
+        super().__init__()
+
+    def __repr__(self):
+        return f"FutureCanceled()"
+
+    def __str__(self):
+        return f"FutureCanceled()"
+
+
 class Future(QObject):
     done = pyqtSignal(object)
     childrenDone = pyqtSignal(object)
@@ -137,6 +148,9 @@ class Future(QObject):
         else:
             return self._exception is not None
 
+    def hasChildren(self) -> bool:
+        return bool(self._children)
+
     def getException(self) -> Optional[BaseException]:
         return self._exception
 
@@ -145,6 +159,9 @@ class Future(QObject):
 
     def getTaskID(self) -> int:
         return self._taskID
+
+    def getChildren(self) -> List['Future']:
+        return self._children
 
     @staticmethod
     def gather(futures: {Iterable, Sized}) -> 'Future':
