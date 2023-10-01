@@ -20,6 +20,7 @@ from qfluentwidgets import (
     TitleLabel, TransparentPushButton, BodyLabel,
 )
 
+from MCSL2Lib.variables import GlobalMCSL2Variables
 from ..curseforge import SchemaClasses as schemas
 from ..Clients import CfClient
 from ..concurrent import Future
@@ -219,7 +220,7 @@ class PlazaPage(QWidget):
         self.pageLineEdit.setText(f"{self.currentPage} / {self.maxPage}")
         widgets = []
         for mod in mods:
-            widget = SingleModWidget.getWidget(mod, parent=self.resultScrollArea)
+            widget = SingleModWidget.getWidget(mod, parent=self)
             widget.ModImageRef.setPixmap(QPixmap(96, 96))  # set blank image
             self.resultScrollAreaWidgetContents.layout().addWidget(widget)
             widgets.append(widget)
@@ -466,6 +467,10 @@ class PlazaPage(QWidget):
         self.previousPageButton.setText("上一页")
         self.pageLineEdit.setText("页码")
         self.nextPageButton.setText("下一页")
+
+        self.resultScrollArea.viewport().setStyleSheet(
+            GlobalMCSL2Variables.scrollAreaViewportQss
+        )
 
         #
         self.SearchLineEdit.setEnabled(False)
