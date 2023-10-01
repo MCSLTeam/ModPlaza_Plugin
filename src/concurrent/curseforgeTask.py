@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from Plugins.Mod_Plaza.concurrent import Task, TaskManager, Future
-from Plugins.Mod_Plaza.curseforge import CurseForgeAPI, SchemaClasses as schemas
+from . import Task, TaskManager, Future
+from ..curseforge import CurseForgeAPI, SchemaClasses as schemas
 
 
 @dataclass

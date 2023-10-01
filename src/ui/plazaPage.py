@@ -20,16 +20,19 @@ from qfluentwidgets import (
     TitleLabel, TransparentPushButton, BodyLabel,
 )
 
-import Plugins.Mod_Plaza.curseforge.SchemaClasses as schemas
-from Plugins.Mod_Plaza.Clients import CfClient
-from Plugins.Mod_Plaza.concurrent import Future
-from Plugins.Mod_Plaza.concurrent.curseforgeTask import GetMinecraftInfoManager, CurseForgeSearchBody, \
+from ..curseforge import SchemaClasses as schemas
+from ..Clients import CfClient
+from ..concurrent import Future
+from ..concurrent.curseforgeTask import (
+    GetMinecraftInfoManager,
+    CurseForgeSearchBody,
     MinecraftModSearchManager
-from Plugins.Mod_Plaza.curseforge.Utils import getStructureCategories
-from Plugins.Mod_Plaza.ui.singleModWidget import SingleModWidget
-from Plugins.Mod_Plaza.utils.FetchImageManager import FetchImageManager
+)
+from ..curseforge.Utils import getStructureCategories
+from .singleModWidget import SingleModWidget
+from ..utils.FetchImageManager import FetchImageManager
 
-CLASS_ID = schemas.MinecraftClassId.BukkitPlugin
+CLASS_ID = schemas.MinecraftClassId.Mod
 CLASS_NAME = CLASS_ID.name
 
 
@@ -48,6 +51,7 @@ class PlazaPage(QWidget):
         self.setupUI()
         # UI
         self.pageLineEdit.setAlignment(Qt.AlignCenter)
+
 
         # mod repository
         self.searchSrcComboBox.addItem("CurseForge")
@@ -87,6 +91,7 @@ class PlazaPage(QWidget):
 
     @pyqtSlot(object)
     def getCurseForgeInfo(self, data):
+        self.titleLabel.setText(f"{CLASS_NAME}广场")
         minecraftVersions: List[schemas.MinecraftGameVersion] = data["minecraftVersions"]
         modCategories: List[schemas.Category] = getStructureCategories(data["modCategories"], 6)  # Mod
         pluginCategories: List[schemas.Category] = getStructureCategories(data["pluginCategories"], 5)  # Plugin
@@ -189,7 +194,10 @@ class PlazaPage(QWidget):
                 except TypeError:  # 上次搜索无结果
                     pass
                 print("Canceled last page task.")
-            self.lastPageTaskFuture.deleteLater()  # delete last page task
+            try:
+                self.lastPageTaskFuture.deleteLater() # delete last page task
+            except RuntimeError as e:
+                print(e)
         self.thumbnailImages = 0
 
         self.titleLabel.setText(f"{CLASS_NAME}广场 (正在搜索...)")
@@ -449,7 +457,7 @@ class PlazaPage(QWidget):
 
         self.gridLayout.addLayout(self.horizontalLayout_5, 5, 1, 1, 3)
 
-        self.titleLabel.setText(f"{CLASS_NAME}广场")
+        self.titleLabel.setText(f"{CLASS_NAME}广场 (正在加载...)")
         self.sortTypeTitle.setText("排序方式        ")
         self.mcVersionTitle.setText("Minecraft版本")
         self.searchSrcTitle.setText("搜索源  ")

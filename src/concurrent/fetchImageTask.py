@@ -3,9 +3,9 @@ from typing import Optional, Dict
 from PyQt5.QtCore import QSize
 from PyQt5.QtGui import QPixmap
 
-from Plugins.Mod_Plaza.Clients import longCachedRequest
-from Plugins.Mod_Plaza.concurrent.future import Future
-from Plugins.Mod_Plaza.concurrent.task import Task
+from ..Clients import longCachedRequest
+from ..concurrent.future import Future
+from ..concurrent.task import Task
 
 
 class FetchImageTask(Task):

@@ -6,10 +6,9 @@ from PyQt5.QtCore import QThread, pyqtSignal, QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGridLayout, QLabel, QWidget, QPushButton, QMessageBox
 from pyqt5_plugins.examplebuttonplugin import QtGui
 
-from Plugins.Mod_Plaza.Clients import CfClient
-from Plugins.Mod_Plaza.curseforge import CurseForgeAPI, SchemaClasses as schemas
-from Plugins.Mod_Plaza.utils.CacheDB import CacheDB
-from Plugins.Mod_Plaza.utils.FetchImageManager import FetchImageManager
+from Clients import CfClient
+from curseforge import CurseForgeAPI, SchemaClasses as schemas
+from utils.FetchImageManager import FetchImageManager
 
 
 class AThread(QThread):

@@ -8,7 +8,7 @@ from qfluentwidgets import (
     CardWidget,
 )
 
-from Plugins.Mod_Plaza.curseforge import SchemaClasses as schemas
+from ..curseforge import SchemaClasses as schemas
 
 
 class SingleModWidget(CardWidget):

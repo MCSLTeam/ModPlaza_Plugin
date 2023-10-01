@@ -3,10 +3,10 @@ import sqlite3
 
 import requests_cache as rqc
 
-from Plugins.Mod_Plaza.CFAPI import KEY
-from Plugins.Mod_Plaza.curseforge import CurseForgeAPI, SchemaClasses as schema
+from .CFAPI import KEY
+from .curseforge import CurseForgeAPI, SchemaClasses as schema
 
-curdir = os.path.abspath(os.path.dirname(__file__))
+curdir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
 
 def vacuum():
@@ -28,11 +28,13 @@ shortCachedRequest = rqc.CachedSession(
     backend="sqlite",
     expire_after=3600
 )
+# shortCachedRequest.cache.delete(expired=True)
 longCachedRequest = rqc.CachedSession(
     os.path.join(curdir, "cache", "CurseForgeBlob-Cache"),
     backend="sqlite",
     expire_after=86400  # 1day
 )
+# longCachedRequest.cache.delete(expired=True)
 CfClient = CurseForgeAPI(KEY, shortCachedRequest, proxies={'http': '127.0.0.1:7890', 'https': '127.0.0.1:7890'})
 
 if __name__ == '__main__':

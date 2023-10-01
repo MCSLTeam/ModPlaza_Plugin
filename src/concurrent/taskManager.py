@@ -2,9 +2,10 @@ import weakref
 from typing import Dict, List
 
 from PyQt5.QtCore import QThreadPool, QObject
+from psutil import cpu_count
 
-from Plugins.Mod_Plaza.concurrent.future import Future, FutureCancelled
-from Plugins.Mod_Plaza.concurrent.task import Task
+from .future import Future, FutureCancelled
+from .task import Task
 
 
 class TaskManager(QObject):
@@ -14,7 +15,7 @@ class TaskManager(QObject):
             self.threadPool = QThreadPool.globalInstance()
         else:
             self.threadPool = QThreadPool()
-            self.threadPool.setMaxThreadCount(4)
+            self.threadPool.setMaxThreadCount(2 * cpu_count())  # IO-Bound = 2*N, CPU-Bound = N + 1
         self.taskMap = {}
         self.tasks: Dict[int, weakref.ReferenceType] = {}
         self.taskCounter = 0
@@ -45,14 +46,17 @@ class TaskManager(QObject):
 
     def _taskSingleCancel(self, fut: Future):
         _id = fut.getTaskID()
-        task = self.tasks[_id]()
+        task: Task = self.tasks[_id]()
         if task is not None:
-            try:
-                self.threadPool.cancel(task)
-                print(f"Task {_id} canceled.")
-            except RuntimeError:
-                print(f"Task {_id} already done.")
-
+            # try:
+            #     self.threadPool.cancel(task)
+            #     print(f"Task {_id} canceled.")
+            # except RuntimeError:
+            #     print(f"Task {_id} already done.")
+            task.setAutoDelete(False)
+            if self.threadPool.tryTake(task):
+                del self.tasks[_id]
+            task.setAutoDelete(True)
 
     def cancelTask(self, fut: Future):
         self._taskCancel(fut)
