@@ -8,7 +8,6 @@ from qfluentwidgets import NavigationItemPosition, InfoBar, InfoBarPosition
 from Adapters.Plugin import Plugin
 from MCSL2Lib.windowInterface import Window
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "site-packages")))
 sys.path.append(os.path.join("./Plugins/ModPlaza_Plugin/"))
 import src
 
