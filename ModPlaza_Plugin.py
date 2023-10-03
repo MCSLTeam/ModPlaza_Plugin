@@ -1,15 +1,19 @@
+import os.path
+import sys
+
 from PyQt5.QtCore import Qt
+from qfluentwidgets import FluentIcon as FIF
 from qfluentwidgets import NavigationItemPosition, InfoBar, InfoBarPosition
 
 from Adapters.Plugin import Plugin
 from MCSL2Lib.windowInterface import Window
-from qfluentwidgets import FluentIcon as FIF
 
-from .src.ui.plazaPage import PlazaPage
+sys.path.append(os.path.join("./Plugins/ModPlaza_Plugin/"))
+import src
 
 ModPlaza_Plugin = Plugin()
 
-modPlazaPage = PlazaPage(None)
+modPlazaPage = src.PlazaPage(None)
 
 
 def load():

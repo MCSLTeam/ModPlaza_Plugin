@@ -173,9 +173,7 @@ class MinecraftClassId(enum.Enum):
     Modpack = 4471
     Customization = 4546
     Addons = 4559
-    Unknown1 = 4944
-    Unknown2 = 4979
-    Unknown3 = 4984
+    Shaders = 6552
 
 
 # CoreStatus Schema

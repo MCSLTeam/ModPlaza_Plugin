@@ -20,17 +20,16 @@ from qfluentwidgets import (
     TitleLabel, TransparentPushButton, BodyLabel,
 )
 
-from MCSL2Lib.variables import GlobalMCSL2Variables
-from ..curseforge import SchemaClasses as schemas
-from ..Clients import CfClient
+from .singleModWidget import SingleModWidget
+from ..Client.Clients import CfClient
 from ..concurrent import Future
 from ..concurrent.curseforgeTask import (
     GetMinecraftInfoManager,
     CurseForgeSearchBody,
     MinecraftModSearchManager
 )
+from ..curseforge import SchemaClasses as schemas
 from ..curseforge.Utils import getStructureCategories
-from .singleModWidget import SingleModWidget
 from ..utils.FetchImageManager import FetchImageManager
 
 CLASS_ID = schemas.MinecraftClassId.Mod
@@ -53,11 +52,10 @@ class PlazaPage(QWidget):
         # UI
         self.pageLineEdit.setAlignment(Qt.AlignCenter)
 
-
         # mod repository
         self.searchSrcComboBox.addItem("CurseForge")
         self.sortTypeComboBox.addItem("Any")
-        self.sortTypeComboBox.addItems(schemas.ModSearchSortField._member_names_)
+        self.sortTypeComboBox.addItems(sorted(schemas.ModSearchSortField._member_names_))
 
         # curseforge
         # fetch minecraft info
@@ -196,7 +194,7 @@ class PlazaPage(QWidget):
                     pass
                 print("Canceled last page task.")
             try:
-                self.lastPageTaskFuture.deleteLater() # delete last page task
+                self.lastPageTaskFuture.deleteLater()  # delete last page task
             except RuntimeError as e:
                 print(e)
         self.thumbnailImages = 0
@@ -216,6 +214,7 @@ class PlazaPage(QWidget):
     def onSearchModDone(self, response: schemas.SearchModsResponse):
         mods = response.data
         self.pageSize = response.pagination.resultCount
+        print(response.pagination.totalCount)
         self.maxPage = response.pagination.totalCount // self.maxPageSize + 1
         self.pageLineEdit.setText(f"{self.currentPage} / {self.maxPage}")
         widgets = []
@@ -469,7 +468,7 @@ class PlazaPage(QWidget):
         self.nextPageButton.setText("下一页")
 
         self.resultScrollArea.viewport().setStyleSheet(
-            GlobalMCSL2Variables.scrollAreaViewportQss
+            "background-color: transparent;"
         )
 
         #

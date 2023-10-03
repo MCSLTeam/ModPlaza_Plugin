@@ -48,15 +48,13 @@ class TaskManager(QObject):
         _id = fut.getTaskID()
         task: Task = self.tasks[_id]()
         if task is not None:
-            # try:
-            #     self.threadPool.cancel(task)
-            #     print(f"Task {_id} canceled.")
-            # except RuntimeError:
-            #     print(f"Task {_id} already done.")
-            task.setAutoDelete(False)
-            if self.threadPool.tryTake(task):
-                del self.tasks[_id]
-            task.setAutoDelete(True)
+            try:
+                task.setAutoDelete(False)
+                if self.threadPool.tryTake(task):
+                    del self.tasks[_id]
+                task.setAutoDelete(True)
+            except RuntimeError:
+                print("wrapped C/C++ object of type FetchImageTask has been deleted")
 
     def cancelTask(self, fut: Future):
         self._taskCancel(fut)

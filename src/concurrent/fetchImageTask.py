@@ -3,7 +3,7 @@ from typing import Optional, Dict
 from PyQt5.QtCore import QSize
 from PyQt5.QtGui import QPixmap
 
-from ..Clients import longCachedRequest
+from ..Client.Clients import longCachedRequest
 from ..concurrent.future import Future
 from ..concurrent.task import Task
 
