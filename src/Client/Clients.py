@@ -38,4 +38,4 @@ longCachedRequest = rqc.CachedSession(
     expire_after=86400  # 1day
 )
 # longCachedRequest.cache.delete(expired=True)
-CfClient = CurseForgeAPI(__KEY__, shortCachedRequest)
+CfClient = CurseForgeAPI('$2a$10$/19NYVOIjJEhtKjWg.BhPOVc4HgaekvbZoVi0Pxs9b79dOSjtTCNC', shortCachedRequest)
