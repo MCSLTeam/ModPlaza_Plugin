@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QSizePolicy, QGridLayout, QHBoxLayout, QSpacerItem
 from qfluentwidgets import (
     BodyLabel,
@@ -12,9 +12,12 @@ from ..curseforge import SchemaClasses as schemas
 
 
 class SingleModWidget(CardWidget):
+    requestDetail = pyqtSignal(object)
+
     def __init__(self, mod: schemas.Mod, parent):
         super().__init__(parent=parent)
         self.setupUi()
+        self.clicked.connect(lambda: self.requestDetail.emit(self))
 
         self.__mod = mod
 

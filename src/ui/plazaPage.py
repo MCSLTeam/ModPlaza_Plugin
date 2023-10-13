@@ -17,20 +17,21 @@ from qfluentwidgets import (
     SimpleCardWidget,
     SmoothScrollArea,
     StrongBodyLabel,
-    TitleLabel, TransparentPushButton, BodyLabel,
+    TitleLabel,
+    TransparentPushButton,
+    BodyLabel,
+    OpacityAniStackedWidget
 )
 
+from .modDetailPage import ModDetailPage
 from .singleModWidget import SingleModWidget
-from ..Client.Clients import CfClient
 from ..concurrent import Future
 from ..concurrent.curseforgeTask import (
-    GetMinecraftInfoManager,
-    CurseForgeSearchBody,
-    MinecraftModSearchManager
+    CurseForgeSearchBody
 )
 from ..curseforge import SchemaClasses as schemas
 from ..curseforge.Utils import getStructureCategories
-from ..utils.FetchImageManager import FetchImageManager
+from ..managers import minecraftInfoManager, fetchImageManager, minecraftModSearchManager
 
 CLASS_ID = schemas.MinecraftClassId.Mod
 CLASS_NAME = CLASS_ID.name
@@ -48,6 +49,7 @@ class PageLineEdit(SearchLineEdit):
 class PlazaPage(QWidget):
     def __init__(self, parent):
         super().__init__(parent=parent)
+        self.parent()  # type: OpacityAniStackedWidget
         self.setupUI()
         # UI
         self.pageLineEdit.setAlignment(Qt.AlignCenter)
@@ -59,11 +61,12 @@ class PlazaPage(QWidget):
 
         # curseforge
         # fetch minecraft info
-        self.minecraftInfoManager = GetMinecraftInfoManager(CfClient)
-        self.minecraftModSearchManager = MinecraftModSearchManager(CfClient)
-        self.fetchImageManager = FetchImageManager()
+        self.minecraftInfoManager = minecraftInfoManager
+        self.minecraftModSearchManager = minecraftModSearchManager
+        self.fetchImageManager = fetchImageManager
 
-        self.minecraftInfoManager.asyncGetMinecraftInfo().allDone.connect(self.getCurseForgeInfo)
+        (fut := self.minecraftInfoManager.asyncGetMinecraftInfo()).result.connect(self.onCurseForgeInfoGet)
+        fut.failed.connect(self.onCurseForgeInfoGetFailed)
         # data structure
         self.minecraftVersionMap: Dict[str, Optional[schemas.MinecraftGameVersion]] = {"Any": None}
         self.modCategoryMap: Dict[str, Optional[schemas.Category]] = {"Any": None}
@@ -88,8 +91,19 @@ class PlazaPage(QWidget):
         self.pageSize = 0
         self.thumbnailImages = 0
 
+    def deleteSelf(self):
+        self.minecraftInfoManager.deleteLater()
+        self.minecraftModSearchManager.deleteLater()
+        self.fetchImageManager.deleteLater()
+
     @pyqtSlot(object)
-    def getCurseForgeInfo(self, data):
+    def onCurseForgeInfoGetFailed(self, exception):
+        self.titleLabel.setText(f"{CLASS_NAME}广场 (加载失败)")
+        self.titleLabel.setToolTip(str(exception))
+        self.SearchLineEdit.setEnabled(False)
+
+    @pyqtSlot(object)
+    def onCurseForgeInfoGet(self, data):
         self.titleLabel.setText(f"{CLASS_NAME}广场")
         minecraftVersions: List[schemas.MinecraftGameVersion] = data["minecraftVersions"]
         modCategories: List[schemas.Category] = getStructureCategories(data["modCategories"], 6)  # Mod
@@ -127,6 +141,7 @@ class PlazaPage(QWidget):
         # ENDREGION
 
         self.SearchLineEdit.setEnabled(True)
+        self.searchMod()
 
     def getCurrentSearchBody(self) -> CurseForgeSearchBody:
         category = None
@@ -188,7 +203,7 @@ class PlazaPage(QWidget):
             if not fut.isDone():
                 self.fetchImageManager.cancelTask(self.lastPageTaskFuture)
                 try:
-                    fut.allDone.disconnect()
+                    fut.result.disconnect()
                     fut.partialDone.disconnect()
                 except TypeError:  # 上次搜索无结果
                     pass
@@ -202,7 +217,7 @@ class PlazaPage(QWidget):
         self.titleLabel.setText(f"{CLASS_NAME}广场 (正在搜索...)")
         self.clearWidget()
         future = self.minecraftModSearchManager.asyncSearchMod(self.getCurrentSearchBody())
-        future.allDone.connect(self.onSearchModDone)
+        future.result.connect(self.onSearchModDone)
 
     def clearWidget(self):
         while self.resultScrollAreaWidgetContents.layout().count():
@@ -220,6 +235,7 @@ class PlazaPage(QWidget):
         widgets = []
         for mod in mods:
             widget = SingleModWidget.getWidget(mod, parent=self)
+            widget.requestDetail.connect(self.onSingleModWidgetClicked)
             widget.ModImageRef.setPixmap(QPixmap(96, 96))  # set blank image
             self.resultScrollAreaWidgetContents.layout().addWidget(widget)
             widgets.append(widget)
@@ -234,9 +250,21 @@ class PlazaPage(QWidget):
             self.titleLabel.setText(f"{CLASS_NAME}广场 (无结果)")
         else:
             self.titleLabel.setText(f"{CLASS_NAME}广场 (正在加载缩略图...)")
-            fut.allDone.connect(lambda _: self.titleLabel.setText(f"{CLASS_NAME}广场"))
+            fut.result.connect(lambda _: self.titleLabel.setText(f"{CLASS_NAME}广场"))
             fut.partialDone.connect(self.onThumbnailsPartialFetched)
         self.lastPageTaskFuture = fut
+
+    @pyqtSlot(schemas.Mod)
+    def onSingleModWidgetClicked(self, widget: SingleModWidget):
+        p = self.parent()
+        # p: OpacityAniStackedWidget
+        mod = widget.Mod
+        detailedPage = ModDetailPage.getInstance(mod)
+        detailedPage.ui.backButton.clicked.connect(lambda: p.setCurrentIndex(0))
+        if p.count() > 1:
+            p.removeWidgetByIndex(1)
+        p.addWidget(detailedPage)
+        p.setCurrentIndex(1)
 
     def onThumbnailsPartialFetched(self, fut: Future):
         self.thumbnailImages += 1

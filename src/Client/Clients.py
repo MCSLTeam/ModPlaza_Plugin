@@ -4,7 +4,7 @@ import sqlite3
 import requests_cache as rqc
 
 try:
-    from .CFAPI import __KEY__
+    from .API_KEY import __KEY__
 except ImportError:
     pass
 from ..curseforge import CurseForgeAPI

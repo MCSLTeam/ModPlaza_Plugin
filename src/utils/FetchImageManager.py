@@ -10,7 +10,8 @@ class FetchImageManager(TaskManager):
 
     def __init__(self, useGlobalThreadPool=False):
         super().__init__(useGlobalThreadPool)
-        # self.threadPool.setMaxThreadCount(16)
+        self.__successCbMap = {}
+        self.__failedCbMap = {}
 
     def asyncFetch(
             self,
@@ -18,8 +19,9 @@ class FetchImageManager(TaskManager):
             target: QWidget,
             timeout: int = 10,
             proxy: Optional[Dict] = None,
+            size: Tuple[int, int] = (-1, -1),
             verify: bool = True,
-            successCallback: Callable[[QPixmap, ], None] = lambda _: None,
+            successCallback: Callable[[Future, ], None] = lambda _: None,
             failedCallback: Callable[[Future], None] = lambda _: None
     ) -> Future:
         """
@@ -28,6 +30,7 @@ class FetchImageManager(TaskManager):
         :param timeout: The timeout of the request
         :param proxy: The proxy to use
         :param verify: Whether to verify the SSL certificate
+        :param size: The size of the image to fetch
         :param successCallback: The callback to call when the image is fetched (takes the image fetched as an argument)
         :param failedCallback: The callback to call when the image is failed to fetch (takes the failed future as an argument)
         :return: None
@@ -42,8 +45,9 @@ class FetchImageManager(TaskManager):
             future=future
         )
         future.setExtra("url", url)
-        future.setCallback(successCallback)
-        future.setFailedCallback(failedCallback)
+        future.setExtra("size", size)
+        self.__successCbMap[self.taskCounter] = successCallback
+        self.__failedCbMap[self.taskCounter] = failedCallback
 
         self._taskRun(task, future, target=target)
         return future
@@ -51,14 +55,16 @@ class FetchImageManager(TaskManager):
     def asyncFetchMultiple(
             self,
             tasks: List[Tuple[Optional[None], QWidget]],
+            size: Tuple[int, int] = (-1, -1),
             timeout: int = 10,
             proxy: Optional[Dict] = None,
             verify: bool = True,
-            successCallback: Callable[[QPixmap], None] = lambda _: None,
+            successCallback: Callable[[Future], None] = lambda _: None,
             failedCallback: Callable[[Future], None] = lambda _: None
     ) -> Future:
         """
         :param tasks: A list of tuples of (url, target widget)
+        :param size: The size of the image to fetch
         :param timeout: The timeout of the request
         :param proxy: The proxy to use
         :param verify: Whether to verify the SSL certificate
@@ -74,6 +80,7 @@ class FetchImageManager(TaskManager):
                     target,
                     timeout,
                     proxy,
+                    size,
                     verify,
                     successCallback,
                     failedCallback
@@ -92,12 +99,22 @@ class FetchImageManager(TaskManager):
         """
         e = fut.getExtra("exception")
         _id = fut.getTaskID()
-        img = fut.getExtra("img")
+        img: QPixmap = fut.getExtra("img")
+        size = fut.getExtra("size")
+        if size != (-1, -1):
+            img = img.scaled(size[0], size[1])  # resize image
 
         if isinstance(e, Exception):
             fut.setFailed(e)
             self.taskMap[_id].setText("加载失败...")
+
+            self.__failedCbMap[_id](fut)
+            del self.__failedCbMap[_id]
         else:
             fut.setResult(img)
             self.taskMap[_id].setPixmap(img)
+
+            self.__successCbMap[_id](fut)
+            del self.__successCbMap[_id]
+
         del self.taskMap[_id]

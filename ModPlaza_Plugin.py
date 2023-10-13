@@ -14,7 +14,12 @@ import src
 
 ModPlaza_Plugin = Plugin()
 
-modPlazaPage = src.PlazaPage(None)
+# init stacked widget
+stackedWidget = src.ModPlazaStackedWidget(None)
+stackedWidget.setObjectName("modPlazaStackedWidget")
+
+# add widgets
+stackedWidget.addWidget(src.PlazaPage(stackedWidget))
 
 
 def load():
@@ -24,7 +29,7 @@ def load():
 def enable():
     try:
         Window().addSubInterface(
-            modPlazaPage, FIF.DOWNLOAD, "ModPlaza", position=NavigationItemPosition.SCROLL
+            stackedWidget, FIF.DOWNLOAD, "ModPlaza", position=NavigationItemPosition.SCROLL
         )
         InfoBar.success(
             title="提示",
@@ -49,8 +54,7 @@ def enable():
 
 def disable():
     try:
-        Window().navigationInterface.removeWidget(routeKey=modPlazaPage.objectName())
-        modPlazaPage.setParent(None)
+        Window().navigationInterface.removeWidget(routeKey=stackedWidget.objectName())
         InfoBar.success(
             title="提示",
             content="ModPlaza 插件已禁用。",
@@ -70,6 +74,8 @@ def disable():
             duration=2500,
             parent=Window().pluginsInterface,
         )
+    stackedWidget.setCurrentIndex(0)
+    stackedWidget.currentWidget().deleteSelf()
 
 
 ModPlaza_Plugin.register_loadFunc(load)

@@ -1,4 +1,4 @@
-from typing import List, Optional, Callable, Iterable, Sized, Tuple
+from typing import List, Optional, Callable, Iterable, Sized, Tuple, Union
 
 from PyQt5.QtCore import QObject, pyqtSignal, QMutex
 
@@ -49,7 +49,9 @@ class FutureCancelled(FutureError):
 
 
 class Future(QObject):
-    allDone = pyqtSignal(object)  # self
+    result = pyqtSignal(object)  # self
+    done = pyqtSignal(object)  # self
+    failed = pyqtSignal(object)  # self
     partialDone = pyqtSignal(object)  # child future
     childrenDone = pyqtSignal(object)  # self
 
@@ -99,6 +101,9 @@ class Future(QObject):
             setattr(fut, f"_idx", i)
             fut.childrenDone.connect(self.__onChildDone)
             fut._parent = self
+        for i, fut in enumerate(self._children):  # check if child is done
+            if fut.isDone():
+                self.__onChildDone(fut)
 
     def setResult(self, result) -> None:
         """
@@ -115,7 +120,8 @@ class Future(QObject):
                 self.childrenDone.emit(self)
             if self._callback:
                 self._callback(result)
-            self.allDone.emit(result)
+            self.result.emit(result)
+            self.done.emit(self)
         else:
             raise RuntimeError("Future already done")
         # self.deleteLater()  # delete this future object
@@ -133,7 +139,7 @@ class Future(QObject):
                 self.childrenDone.emit(self)
             if self._failedCallback:
                 self._failedCallback(self)
-            self.allDone.emit(self._result)
+            self.failed.emit(self)
         else:
             raise RuntimeError("Future already done")
         # self.deleteLater()
@@ -182,7 +188,7 @@ class Future(QObject):
     def isFailed(self) -> bool:
         return self._failed
 
-    def getResult(self) -> object:
+    def getResult(self) -> Union[object, List[object]]:
         return self._result
 
     def setExtra(self, key, value):
@@ -190,6 +196,9 @@ class Future(QObject):
 
     def getExtra(self, key):
         return self._extra.get(key, None)
+
+    def hasExtra(self, key):
+        return key in self._extra
 
     def __getattr__(self, item):
         return self.getExtra(item)
