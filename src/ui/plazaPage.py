@@ -1,3 +1,4 @@
+import gc
 from typing import Dict, List, Optional
 
 from PyQt5.QtCore import QSize, Qt, QRect, pyqtSlot
@@ -8,7 +9,7 @@ from PyQt5.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QSpacerItem,
-    QFrame, QVBoxLayout,
+    QFrame, QVBoxLayout, QStackedWidget,
 )
 from qfluentwidgets import (
     ComboBox,
@@ -257,14 +258,20 @@ class PlazaPage(QWidget):
     @pyqtSlot(schemas.Mod)
     def onSingleModWidgetClicked(self, widget: SingleModWidget):
         p = self.parent()
-        # p: OpacityAniStackedWidget
+        # p: ModPlazaStackedWidget
         mod = widget.Mod
         detailedPage = ModDetailPage.getInstance(mod)
-        detailedPage.ui.backButton.clicked.connect(lambda: p.setCurrentIndex(0))
+        detailedPage.backSignal.connect(self.onModDetailedPageLeave)
         if p.count() > 1:
             p.removeWidgetByIndex(1)
+            gc.collect()
         p.addWidget(detailedPage)
         p.setCurrentIndex(1)
+
+    def onModDetailedPageLeave(self, page: ModDetailPage):
+        page.deleteModel()
+        p = self.parent()
+        p.setCurrentIndex(0)
 
     def onThumbnailsPartialFetched(self, fut: Future):
         self.thumbnailImages += 1

@@ -8,22 +8,35 @@
 
 
 from PyQt5 import QtCore, QtWidgets
-from qfluentwidgets import BodyLabel, CardWidget, HyperlinkLabel, PixmapLabel, SmoothScrollArea, TitleLabel, PushButton
+from PyQt5.QtCore import QTimer
+from qfluentwidgets import BodyLabel, HyperlinkLabel, PixmapLabel, SmoothScrollArea, TitleLabel, PushButton, \
+    SimpleCardWidget
 
 from .modDetailPageBody import ModDetailPageBody
 from .modDetailPage_DL import ModDetailPage_DL
 from ..concurrent import Future
 from ..curseforge import SchemaClasses as schemas
 from ..managers import fetchImageManager
-from ..model.modDLLinkModel import ModDLLinkModel
+from ..model.modFilesSqlModel import ModFilesSqlModel
 
 
 class ModDetailPage(QtWidgets.QFrame):
+    backSignal = QtCore.pyqtSignal(object)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ui = Ui_Frame()
         self.ui.setupUi(self)
         self.ui.retranslateUi(self)
+        self.ui.backButton.clicked.connect(lambda: self.backSignal.emit(self))
+
+    def deleteModel(self):
+        self.ui.modFilesInterface.ui.TableView.model().delete()
+        self.ui.modFilesInterface.ui.TableView.setModel(None)
+
+    def onBackButtonClicked(self):
+        self.ui.modFilesInterface.deleteLater()
+        QTimer.singleShot(1000, self.deleteLater)
 
     # TODO
     def onCategoryIconClicked(self, icon: PixmapLabel):
@@ -77,7 +90,7 @@ class ModDetailPage(QtWidgets.QFrame):
     def getInstance(mod: schemas.Mod):
         modDetailPage = ModDetailPage()
         modDetailPage.setModInfo(mod)
-        modDetailPage.ui.modFilesInterface.ui.TableView.setModel(model := ModDLLinkModel.getModel(mod))
+        modDetailPage.ui.modFilesInterface.ui.TableView.setModel(model := ModFilesSqlModel.getModel(mod))
         model.modelReset.connect(modDetailPage.ui.modFilesInterface.onModFilesGot)
         return modDetailPage
 
@@ -92,7 +105,7 @@ class Ui_Frame(object):
         self.gridLayout.addItem(spacerItem, 1, 5, 1, 1)
         self.mainWidget = QtWidgets.QVBoxLayout()
         self.mainWidget.setObjectName("mainWidget")
-        self.titleCard = CardWidget(Frame)
+        self.titleCard = SimpleCardWidget(Frame)
         self.titleCard.setObjectName("titleCard")
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout(self.titleCard)
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
@@ -186,7 +199,7 @@ class Ui_Frame(object):
         self.mainWidget.addWidget(self.titleCard)
         spacerItem3 = QtWidgets.QSpacerItem(5, 5, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         self.mainWidget.addItem(spacerItem3)
-        self.bodyCard = CardWidget(Frame)
+        self.bodyCard = SimpleCardWidget(Frame)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -224,12 +237,14 @@ class Ui_Frame(object):
         self.SmoothScrollArea.viewport().setStyleSheet(
             "background-color: transparent;"
         )
+
         self.bodyWidget = ModDetailPageBody(self.bodyCard)
         self.bodyCard.setLayout(QtWidgets.QVBoxLayout(self.bodyCard))
         self.bodyCard.layout().setContentsMargins(0, 0, 0, 0)
         self.bodyCard.layout().addWidget(self.bodyWidget)
-        self.modFilesInterface = ModDetailPage_DL(self.bodyCard)
-        self.descriptionInterface = QtWidgets.QWidget(self.bodyCard)
+
+        self.modFilesInterface = ModDetailPage_DL(self.bodyWidget)
+        self.descriptionInterface = QtWidgets.QWidget(self.bodyWidget)
         self.bodyWidget.addSubInterface(
             self.descriptionInterface,
             "descriptionInterface",

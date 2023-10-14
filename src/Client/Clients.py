@@ -9,6 +9,11 @@ except ImportError:
     pass
 from ..curseforge import CurseForgeAPI
 
+proxy = {
+    "http": "127.0.0.1:7890",
+    "https": "127.0.0.1:7890"
+}
+
 curdir = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 

@@ -1,8 +1,5 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QStackedWidget
 from qfluentwidgets import SegmentedWidget
-
-from .modPlazaStackedWidget import ModPlazaStackedWidget
 
 
 class ModDetailPageBody(QWidget):
@@ -11,7 +8,8 @@ class ModDetailPageBody(QWidget):
         super().__init__(parent=parent)
 
         self.pivot = SegmentedWidget(self)
-        self.stackedWidget = ModPlazaStackedWidget(self)
+        self.stackedWidget = QStackedWidget(self)
+        self.stackedWidget.addWidget(QWidget(self))
         self.vBoxLayout = QVBoxLayout(self)
 
         self.vBoxLayout.addWidget(self.pivot)
@@ -32,3 +30,8 @@ class ModDetailPageBody(QWidget):
     def onCurrentIndexChanged(self, index):
         widget = self.stackedWidget.widget(index)
         self.pivot.setCurrentItem(widget.objectName())
+
+    def prepareDeleteLater(self) -> None:
+        self.stackedWidget.setCurrentIndex(0)
+        for widget in self.stackedWidget.children():
+            widget.deleteLater()

@@ -19,6 +19,10 @@ class ModDetailPage_DL(QtWidgets.QWidget):
         self.ui.setupUi(self)
         self.ui.retranslateUi(self)
 
+    def deleteLater(self) -> None:
+        self.ui.TableView.model().deleteLater()
+        super().deleteLater()
+
     def onModFilesGot(self):
         # adjust table view
         self.ui.TableView.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)

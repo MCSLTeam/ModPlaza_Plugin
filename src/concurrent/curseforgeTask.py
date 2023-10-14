@@ -78,7 +78,7 @@ class MinecraftModSearchTask(Task):
 
 
 class GetMinecraftInfoManager(TaskManager):
-    def __init__(self, clClient: CurseForgeAPI, useGlobalThreadPool=False):
+    def __init__(self, clClient: CurseForgeAPI, useGlobalThreadPool=True):
         super().__init__(useGlobalThreadPool=useGlobalThreadPool)
         self.cfClient = clClient
 
@@ -104,7 +104,7 @@ class GetMinecraftInfoManager(TaskManager):
 
 
 class MinecraftModSearchManager(TaskManager):
-    def __init__(self, clClient: CurseForgeAPI, useGlobalThreadPool=False):
+    def __init__(self, clClient: CurseForgeAPI, useGlobalThreadPool=True):
         super().__init__(useGlobalThreadPool=useGlobalThreadPool)
         self.cfClient = clClient
 
@@ -147,15 +147,19 @@ class MinecraftModFileEntriesTask(Task):
 
     def run(self) -> None:
         cf = self.cfClient
-        response = cf.getModFiles(
-            self.modId,
-            index=self.pageOffset*50,
-        )
+        try:
+            response = cf.getModFiles(
+                self.modId,
+                index=self.pageOffset * 50,
+            )
+        except Exception as exception:
+            self._taskDone(response=exception)
+            return
         self._taskDone(response=response)
 
 
 class MinecraftModFileEntriesManager(TaskManager):
-    def __init__(self, clClient: CurseForgeAPI, useGlobalThreadPool=False):
+    def __init__(self, clClient: CurseForgeAPI, useGlobalThreadPool=True):
         super().__init__(useGlobalThreadPool=useGlobalThreadPool)
         self.cfClient = clClient
 
@@ -180,7 +184,7 @@ class MinecraftModFileEntriesManager(TaskManager):
 
     def asyncGetSpecificPage(self, modId: int, pageOffset: int) -> Future:
         future = Future()
-        task= MinecraftModFileEntriesTask(
+        task = MinecraftModFileEntriesTask(
             _id=self.taskCounter,
             future=future,
             cfClient=self.cfClient,

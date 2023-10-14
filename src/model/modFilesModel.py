@@ -1,71 +1,13 @@
-import dataclasses
 import typing
 
 from PyQt5.QtCore import QObject, QAbstractTableModel, QModelIndex, Qt
 
+from . import ModFileEntry
 from ..curseforge import SchemaClasses as schemas
 from ..managers import minecraftModFileEntriesManager
 
 
-def getReleaseTypeString(releaseType: schemas.FileReleaseType):
-    return {
-        schemas.FileReleaseType.Alpha: "A",
-        schemas.FileReleaseType.Beta: "B",
-        schemas.FileReleaseType.Release: "R",
-    }[releaseType]
-
-
-def getFormatFileSizeString(size: int):
-    if size < 1024:
-        return f"{size}B"
-    elif size < 1024 ** 2:
-        return f"{size / 1024:.2f}KB"
-    elif size < 1024 ** 3:
-        return f"{size / (1024 ** 2):.2f}MB"
-
-
-def getGameVersionAndModLoader(sortableGameVersions: typing.List[schemas.SortableGameVersion]):
-    gameVersions = []
-    modLoaders = []
-    for gm in sortableGameVersions:
-        if gm.gameVersion == '':
-            modLoaders.append(gm.gameVersionName)
-        else:
-            gameVersions.append(gm.gameVersion)
-    gameVersions.sort()
-    modLoaders.sort()
-    return gameVersions, modLoaders
-
-
-@dataclasses.dataclass
-class ModDLEntry:
-    releaseType: schemas.FileReleaseType
-    name: str
-    uploadedTime: str
-    size: int
-    gameVersions: typing.List[schemas.SortableGameVersion]
-
-    downloadLink: str
-    fileHash: typing.List[schemas.FileHash]
-
-    def __seq(self):
-        gameVersions, modLoaders = getGameVersionAndModLoader(self.gameVersions)
-        return (
-            getReleaseTypeString(self.releaseType),  # 0: releaseType,
-            self.name,  # 1: name,
-            (self.uploadedTime).split("T")[0],  # 2: uploadedTime
-            getFormatFileSizeString(self.size),  # 3: size
-            ','.join(gameVersions),  # 4: gameVersion
-            ','.join(modLoaders),  # 5: modLoaders
-            self.downloadLink,  # 6: downloads
-            self.fileHash  # 7: fileHash
-        )
-
-    def __getitem__(self, item: int):
-        return self.__seq()[item]
-
-
-class ModDLLinkModel(QAbstractTableModel):
+class ModFilesModel(QAbstractTableModel):
     """
     display role:
     0: releaseType,
@@ -83,7 +25,7 @@ class ModDLLinkModel(QAbstractTableModel):
 
     def __init__(self, parent: QObject = None):
         super().__init__(parent=parent)
-        self.__tableData: typing.List[ModDLEntry] = []
+        self.__tableData: typing.List[ModFileEntry] = []
 
     def rowCount(self, parent: QModelIndex = ...) -> int:
         return len(self.__tableData)
@@ -101,7 +43,7 @@ class ModDLLinkModel(QAbstractTableModel):
 
     def onModFilesGot(self, modList: typing.List[schemas.File]):
         self.beginResetModel()
-        self.__tableData = [ModDLEntry(
+        self.__tableData = [ModFileEntry(
             releaseType=mod.releaseType,
             name=mod.displayName,
             uploadedTime=mod.fileDate,
@@ -125,7 +67,7 @@ class ModDLLinkModel(QAbstractTableModel):
 
     @staticmethod
     def getModel(mod: schemas.Mod):
-        model = ModDLLinkModel()
+        model = ModFilesModel()
         fut = minecraftModFileEntriesManager.asyncGetModFiles(mod.id)
         fut.result.connect(model.onModFilesGot)
         return model

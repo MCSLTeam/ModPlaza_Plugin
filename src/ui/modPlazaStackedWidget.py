@@ -29,11 +29,6 @@ class ModPlazaStackedWidget(QStackedWidget):
         index_ = self.currentIndex()
         if index == index_:
             return
-
-        # ani = self.__anis[index]
-        # ani.setStartValue(0)
-        # ani.setEndValue(1)
-        # super().setCurrentIndex(index)
         ani = self.__anis[index_]
         ani.setStartValue(1)
         ani.setEndValue(0)
@@ -51,6 +46,7 @@ class ModPlazaStackedWidget(QStackedWidget):
 
     def removeWidgetByIndex(self, index: int) -> None:
         w = self.widget(index)
+        w.deleteLater()
         self.removeWidget(w)
 
     def setCurrentWidget(self, w: QWidget):

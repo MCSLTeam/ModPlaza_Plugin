@@ -9,8 +9,9 @@ from .task import Task
 
 
 class TaskManager(QObject):
-    def __init__(self, useGlobalThreadPool=False):
+    def __init__(self, useGlobalThreadPool=True):
         super().__init__()
+        self.useGlobalThreadPool = useGlobalThreadPool
         if useGlobalThreadPool:
             self.threadPool = QThreadPool.globalInstance()
         else:
@@ -19,6 +20,13 @@ class TaskManager(QObject):
         self.taskMap = {}
         self.tasks: Dict[int, weakref.ReferenceType] = {}
         self.taskCounter = 0
+
+    def deleteLater(self) -> None:
+        if not self.useGlobalThreadPool:
+            self.threadPool.clear()
+            self.threadPool.waitForDone()
+            self.threadPool.deleteLater()
+        super().deleteLater()
 
     def _taskRun(self, task: Task, future: Future, **kwargs):
         self.tasks[self.taskCounter] = weakref.ref(task)
