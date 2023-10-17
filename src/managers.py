@@ -1,10 +1,10 @@
 from .Client.Clients import CfClient
-from .concurrent.curseforgeTask import GetMinecraftInfoManager, MinecraftModSearchManager, \
-    MinecraftModFileEntriesManager
-from .utils.FetchImageManager import FetchImageManager
+from .concurrent.curseforgeTask import GetMinecraftInfoExecutor, MinecraftModSearchExecutor, \
+    MinecraftModFileEntriesExecutor
+from .utils.FetchImageManager import FetchImageManagerBase
 
-minecraftInfoManager = GetMinecraftInfoManager(CfClient)
-minecraftModSearchManager = MinecraftModSearchManager(CfClient)
-fetchImageManager = FetchImageManager()
-minecraftModFileEntriesManager = MinecraftModFileEntriesManager(CfClient)
+minecraftInfoManager = GetMinecraftInfoExecutor(CfClient)
+minecraftModSearchManager = MinecraftModSearchExecutor(CfClient)
+fetchImageManager = FetchImageManagerBase()
+minecraftModFileEntriesManager = MinecraftModFileEntriesExecutor(CfClient)
 

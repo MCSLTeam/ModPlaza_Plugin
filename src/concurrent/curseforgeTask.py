@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from . import Task, TaskManager, Future
+from .taskManager import BaseTaskExecutor
+from .task import BaseTask
+from .future import Future
 from ..curseforge import CurseForgeAPI, SchemaClasses as schemas
 
 
@@ -17,7 +19,7 @@ class CurseForgeSearchBody:
     pageSize: int
 
 
-class GetMinecraftInfoTask(Task):
+class GetMinecraftInfoTask(BaseTask):
     def __init__(self, _id, future, cfClient, parent=None):
         super().__init__(_id=_id, future=future)
         self._parent = parent
@@ -46,7 +48,7 @@ class GetMinecraftInfoTask(Task):
         )
 
 
-class MinecraftModSearchTask(Task):
+class MinecraftModSearchTask(BaseTask):
     def __init__(
             self,
             _id: int,
@@ -77,7 +79,7 @@ class MinecraftModSearchTask(Task):
         self._taskDone(response=response)
 
 
-class GetMinecraftInfoManager(TaskManager):
+class GetMinecraftInfoExecutor(BaseTaskExecutor):
     def __init__(self, clClient: CurseForgeAPI, useGlobalThreadPool=True):
         super().__init__(useGlobalThreadPool=useGlobalThreadPool)
         self.cfClient = clClient
@@ -103,7 +105,7 @@ class GetMinecraftInfoManager(TaskManager):
             })
 
 
-class MinecraftModSearchManager(TaskManager):
+class MinecraftModSearchExecutor(BaseTaskExecutor):
     def __init__(self, clClient: CurseForgeAPI, useGlobalThreadPool=True):
         super().__init__(useGlobalThreadPool=useGlobalThreadPool)
         self.cfClient = clClient
@@ -129,7 +131,7 @@ class MinecraftModSearchManager(TaskManager):
         )
 
 
-class MinecraftModFileEntriesTask(Task):
+class MinecraftModFileEntriesTask(BaseTask):
     def __init__(
             self,
             _id: int,
@@ -137,6 +139,10 @@ class MinecraftModFileEntriesTask(Task):
             cfClient: CurseForgeAPI,
             modId: int,
             pageOffset: int = 0,
+            pageSize: int = 50,
+            modLoaderType: Optional[schemas.ModLoaderType] = None,
+            gameVersion: Optional[int] = None,
+            gameVersionTypeId: Optional[int] = None,
             parent=None
     ):
         super().__init__(_id=_id, future=future)
@@ -144,6 +150,10 @@ class MinecraftModFileEntriesTask(Task):
         self.cfClient: CurseForgeAPI = cfClient
         self.modId = modId
         self.pageOffset = pageOffset
+        self.modLoaderType = modLoaderType
+        self.gameVersion = gameVersion
+        self.gameVersionTypeId = gameVersionTypeId
+        self.pageSize = pageSize
 
     def run(self) -> None:
         cf = self.cfClient
@@ -151,6 +161,10 @@ class MinecraftModFileEntriesTask(Task):
             response = cf.getModFiles(
                 self.modId,
                 index=self.pageOffset * 50,
+                modLoaderType=self.modLoaderType,
+                gameVersion=self.gameVersion,
+                gameVersionTypeId=self.gameVersionTypeId,
+                pageSize=self.pageSize,
             )
         except Exception as exception:
             self._taskDone(response=exception)
@@ -158,7 +172,7 @@ class MinecraftModFileEntriesTask(Task):
         self._taskDone(response=response)
 
 
-class MinecraftModFileEntriesManager(TaskManager):
+class MinecraftModFileEntriesExecutor(BaseTaskExecutor):
     def __init__(self, clClient: CurseForgeAPI, useGlobalThreadPool=True):
         super().__init__(useGlobalThreadPool=useGlobalThreadPool)
         self.cfClient = clClient
@@ -167,6 +181,10 @@ class MinecraftModFileEntriesManager(TaskManager):
             self,
             modId: int,
             pageOffset: int = 0,
+            modLoaderType: Optional[schemas.ModLoaderType] = None,
+            gameVersion: Optional[int] = None,
+            gameVersionTypeId: Optional[int] = None,
+            pageSize: int = 50
     ) -> Future:
         future = Future()
         taskFuture = Future()
@@ -175,14 +193,22 @@ class MinecraftModFileEntriesManager(TaskManager):
             future=taskFuture,
             cfClient=self.cfClient,
             pageOffset=pageOffset,
-            modId=modId
+            modId=modId,
+            modLoaderType=modLoaderType,
+            gameVersion=gameVersion,
+            gameVersionTypeId=gameVersionTypeId,
+            pageSize=pageSize
         )
         self._taskRun(task, taskFuture)
         taskFuture.setExtra("original", future)
         taskFuture.setExtra("modId", modId)
         return future
 
-    def asyncGetSpecificPage(self, modId: int, pageOffset: int) -> Future:
+    def asyncGetSpecificPage(
+            self,
+            modId: int,
+            pageOffset: int
+    ) -> Future:
         future = Future()
         task = MinecraftModFileEntriesTask(
             _id=self.taskCounter,

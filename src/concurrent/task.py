@@ -1,3 +1,4 @@
+import functools
 from typing import Optional
 
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable
@@ -9,7 +10,7 @@ class Signal(QObject):
     finished = pyqtSignal(object)
 
 
-class Task(QRunnable):
+class BaseTask(QRunnable):
     def __init__(self, _id: int, future: Future):
         super().__init__()
         self._signal: Signal = Signal()  # pyqtSignal(object)
@@ -29,3 +30,21 @@ class Task(QRunnable):
         for d in data.items():
             self._future.setExtra(*d)
         self._signal.finished.emit(self._future)
+
+
+def func(*args) -> int:
+    return sum(args)
+
+
+class Task(BaseTask):
+    def __init__(self, _id: int, future: Future, target: functools.partial, args, kwargs):
+        super().__init__(_id=_id, future=future)
+        self._target = target
+        self._kwargs = kwargs
+        self._args = args
+
+    def run(self) -> None:
+        try:
+            self._taskDone(result=self._target(*self._args, **self._kwargs))
+        except Exception as exception:
+            self._taskDone(exception=exception)

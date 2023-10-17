@@ -9,8 +9,7 @@ from PyQt5.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QSpacerItem,
-    QFrame, QVBoxLayout, QStackedWidget,
-)
+    QFrame, QVBoxLayout, )
 from qfluentwidgets import (
     ComboBox,
     EditableComboBox,
@@ -26,10 +25,12 @@ from qfluentwidgets import (
 
 from .modDetailPage import ModDetailPage
 from .singleModWidget import SingleModWidget
-from ..concurrent import Future
+from ..Client.Clients import CfClient
 from ..concurrent.curseforgeTask import (
     CurseForgeSearchBody
 )
+from ..concurrent.future import Future
+from ..concurrent.taskManager import TaskExecutor
 from ..curseforge import SchemaClasses as schemas
 from ..curseforge.Utils import getStructureCategories
 from ..managers import minecraftInfoManager, fetchImageManager, minecraftModSearchManager

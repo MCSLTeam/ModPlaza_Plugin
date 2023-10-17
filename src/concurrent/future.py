@@ -1,6 +1,7 @@
+import warnings
 from typing import List, Optional, Callable, Iterable, Sized, Tuple, Union
 
-from PyQt5.QtCore import QObject, pyqtSignal, QMutex
+from PyQt5.QtCore import QObject, pyqtSignal, QMutex, QSemaphore
 
 
 class FutureError(BaseException):
@@ -114,6 +115,7 @@ class Future(QObject):
         please use in main thread,or use signal-slot to set result !!!
         """
         if not self._done:
+
             self._result = result
             self._done = True
             if self._parent:
@@ -132,6 +134,8 @@ class Future(QObject):
         :return: None
         """
         if not self._done:
+            self._wait.release(1)
+
             self._exception = FutureFailed(exception)
             self._done = True
             self._failed = True

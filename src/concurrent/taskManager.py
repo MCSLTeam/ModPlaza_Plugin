@@ -1,14 +1,15 @@
+import functools
 import weakref
-from typing import Dict, List
+from typing import Dict, List, Callable
 
 from PyQt5.QtCore import QThreadPool, QObject
 from psutil import cpu_count
 
 from .future import Future, FutureCancelled
-from .task import Task
+from .task import BaseTask, Task
 
 
-class TaskManager(QObject):
+class BaseTaskExecutor(QObject):
     def __init__(self, useGlobalThreadPool=True):
         super().__init__()
         self.useGlobalThreadPool = useGlobalThreadPool
@@ -28,7 +29,7 @@ class TaskManager(QObject):
             self.threadPool.deleteLater()
         super().deleteLater()
 
-    def _taskRun(self, task: Task, future: Future, **kwargs):
+    def _taskRun(self, task: BaseTask, future: Future, **kwargs):
         self.tasks[self.taskCounter] = weakref.ref(task)
         future.setTaskID(self.taskCounter)
 
@@ -40,7 +41,10 @@ class TaskManager(QObject):
         """
         need manually set Future.setFailed() or Future.setResult() to be called!!!
         """
-        raise NotImplemented
+        if (e := fut.getExtra("exception")) is Exception:
+            fut.setFailed(e)
+        else:
+            fut.setResult(fut.getExtra("result"))
 
     def _taskCancel(self, fut: Future):
         stack: List[Future] = []
@@ -54,7 +58,7 @@ class TaskManager(QObject):
 
     def _taskSingleCancel(self, fut: Future):
         _id = fut.getTaskID()
-        task: Task = self.tasks[_id]()
+        task: BaseTask = self.tasks[_id]()
         if task is not None:
             try:
                 task.setAutoDelete(False)
@@ -66,3 +70,25 @@ class TaskManager(QObject):
 
     def cancelTask(self, fut: Future):
         self._taskCancel(fut)
+
+
+class TaskExecutor(BaseTaskExecutor):
+    globalInstance = None
+
+    def asyncRun(self, target: Callable, *args, **kwargs) -> Future:
+        future = Future()
+        task = Task(
+            _id=self.taskCounter,
+            future=future,
+            target=target if target is functools.partial else functools.partial(target),
+            args=args,
+            kwargs=kwargs
+        )
+        self._taskRun(task, future)
+        return future
+
+    @staticmethod
+    def getGlobalInstance():
+        if TaskExecutor.globalInstance is None:
+            TaskExecutor.globalInstance = TaskExecutor()
+        return TaskExecutor.globalInstance

@@ -3,10 +3,13 @@ from typing import Callable, List, Tuple, Optional, Dict
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QWidget
 
-from ..concurrent import TaskManager, Task, Future, FetchImageTask
+from ..concurrent.taskManager import BaseTaskExecutor
+from ..concurrent.task import BaseTask
+from ..concurrent.future import Future
+from ..concurrent.fetchImageTask import FetchImageBaseTask
 
 
-class FetchImageManager(TaskManager):
+class FetchImageManagerBase(BaseTaskExecutor):
 
     def __init__(self, useGlobalThreadPool=False):
         super().__init__(useGlobalThreadPool)
@@ -36,7 +39,7 @@ class FetchImageManager(TaskManager):
         :return: None
         """
         future = Future()
-        task = FetchImageTask(
+        task = FetchImageBaseTask(
             url=url,
             _id=self.taskCounter,
             timeout=timeout,
@@ -89,7 +92,7 @@ class FetchImageManager(TaskManager):
         future = Future.gather(futures)
         return future
 
-    def _taskRun(self, task: Task, future: Future, **kwargs):
+    def _taskRun(self, task: BaseTask, future: Future, **kwargs):
         self.taskMap[self.taskCounter] = kwargs.get("target")
         super()._taskRun(task, future, **kwargs)
 

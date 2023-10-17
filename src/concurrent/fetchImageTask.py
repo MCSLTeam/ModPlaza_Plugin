@@ -5,10 +5,10 @@ from PyQt5.QtGui import QPixmap
 
 from ..Client.Clients import longCachedRequest
 from ..concurrent.future import Future
-from ..concurrent.task import Task
+from ..concurrent.task import BaseTask
 
 
-class FetchImageTask(Task):
+class FetchImageBaseTask(BaseTask):
     def __init__(
             self,
             url,
