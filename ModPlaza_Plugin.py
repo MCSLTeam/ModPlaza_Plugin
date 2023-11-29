@@ -1,7 +1,7 @@
 import os.path
 import sys
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QThreadPool
 from qfluentwidgets import FluentIcon as FIF
 from qfluentwidgets import NavigationItemPosition, InfoBar, InfoBarPosition
 
@@ -15,7 +15,7 @@ import src
 ModPlaza_Plugin = Plugin()
 
 # init stacked widget
-stackedWidget = src.ModPlazaStackedWidget(None)
+stackedWidget = src.ModPlazaStackedWidget()
 stackedWidget.setObjectName("modPlazaStackedWidget")
 
 # add widgets
@@ -50,6 +50,7 @@ def enable():
             duration=2500,
             parent=Window().pluginsInterface,
         )
+
 
 
 def disable():

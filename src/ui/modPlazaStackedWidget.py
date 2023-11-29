@@ -16,9 +16,9 @@ class ModPlazaStackedWidget(QStackedWidget):
     def addWidget(self, w: QWidget):
         super().addWidget(w)
 
-        effect = QGraphicsOpacityEffect(self)
+        effect = QGraphicsOpacityEffect(w)
         effect.setOpacity(1)
-        ani = QPropertyAnimation(effect, b'opacity', self)
+        ani = QPropertyAnimation(effect, b'opacity', w)
         ani.setDuration(170)
         ani.finished.connect(self.__onFadeAniFinished)
         self.__anis.append(ani)

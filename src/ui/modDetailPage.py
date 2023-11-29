@@ -11,6 +11,7 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QTimer
 from qfluentwidgets import BodyLabel, HyperlinkLabel, PixmapLabel, SmoothScrollArea, TitleLabel, PushButton, \
     SimpleCardWidget
+# from qframelesswindow.webengine import FramelessWebEngineView
 
 from .modDetailPageBody import ModDetailPageBody
 from .modDetailPage_DL import ModDetailPage_DL

@@ -134,8 +134,6 @@ class Future(QObject):
         :return: None
         """
         if not self._done:
-            self._wait.release(1)
-
             self._exception = FutureFailed(exception)
             self._done = True
             self._failed = True
