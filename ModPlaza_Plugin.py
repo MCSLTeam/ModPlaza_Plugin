@@ -10,16 +10,16 @@ from MCSL2Lib.windowInterface import Window
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "site-packages"))
 sys.path.append(os.path.join("./Plugins/ModPlaza_Plugin/"))
-import src
+from src.ui import ModPlazaStackedWidget, PlazaPage
 
 ModPlaza_Plugin = Plugin()
 
 # init stacked widget
-stackedWidget = src.ModPlazaStackedWidget()
+stackedWidget = ModPlazaStackedWidget()
 stackedWidget.setObjectName("modPlazaStackedWidget")
 
 # add widgets
-stackedWidget.addWidget(src.PlazaPage(stackedWidget))
+stackedWidget.addWidget(PlazaPage(stackedWidget))
 
 
 def load():

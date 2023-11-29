@@ -15,7 +15,7 @@ from qfluentwidgets import BodyLabel, HyperlinkLabel, PixmapLabel, SmoothScrollA
 
 from .modDetailPageBody import ModDetailPageBody
 from .modDetailPage_DL import ModDetailPage_DL
-from ..concurrent.future import Future
+from Plugins.ModPlaza_Plugin.src.concurrent.future.future import Future
 from ..curseforge import SchemaClasses as schemas
 from ..managers import fetchImageManager
 from ..model.modFilesSqlModel import ModFilesSqlModel

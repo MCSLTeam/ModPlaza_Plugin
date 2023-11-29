@@ -3,7 +3,7 @@ from typing import Optional
 
 from PyQt5.QtCore import QObject, pyqtSignal, QRunnable
 
-from .future import Future
+from Plugins.ModPlaza_Plugin.src.concurrent.future.future import Future
 
 
 class Signal(QObject):
@@ -17,6 +17,7 @@ class BaseTask(QRunnable):
         self._future: Future = future
         self._id: int = _id
         self._exception: Optional[BaseException] = None
+        self._semaphore = future.semaphore
 
     @property
     def finished(self):
@@ -30,6 +31,7 @@ class BaseTask(QRunnable):
         for d in data.items():
             self._future.setExtra(*d)
         self._signal.finished.emit(self._future)
+        self._semaphore.release(1)
 
 
 def func(*args) -> int:

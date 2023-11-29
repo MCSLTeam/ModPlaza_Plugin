@@ -4,8 +4,8 @@ from PyQt5.QtCore import QSize
 from PyQt5.QtGui import QPixmap
 
 from ..Client.Clients import longCachedRequest
-from ..concurrent.future import Future
-from ..concurrent.task import BaseTask
+from Plugins.ModPlaza_Plugin.src.concurrent.future.future import Future
+from Plugins.ModPlaza_Plugin.src.concurrent.task.task import BaseTask
 
 
 class FetchImageBaseTask(BaseTask):

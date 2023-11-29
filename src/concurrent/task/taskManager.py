@@ -2,10 +2,11 @@ import functools
 import weakref
 from typing import Dict, List, Callable
 
+from PyQt5 import QtCore
 from PyQt5.QtCore import QThreadPool, QObject
 from psutil import cpu_count
 
-from .future import Future, FutureCancelled
+from Plugins.ModPlaza_Plugin.src.concurrent.future.future import Future, FutureCancelled
 from .task import BaseTask, Task
 
 
@@ -32,8 +33,8 @@ class BaseTaskExecutor(QObject):
     def _taskRun(self, task: BaseTask, future: Future, **kwargs):
         self.tasks[self.taskCounter] = weakref.ref(task)
         future.setTaskID(self.taskCounter)
-
-        task.signal.finished.connect(self._taskDone)
+        # task.signal.finished:pyqtBoundSignal
+        task.signal.finished.connect(self._taskDone, type=QtCore.Qt.ConnectionType.QueuedConnection)
         self.threadPool.start(task)
         self.taskCounter += 1
 

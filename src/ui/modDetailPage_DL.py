@@ -5,7 +5,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from qfluentwidgets import BodyLabel, ComboBox, StrongBodyLabel, SwitchButton, TableView, TransparentPushButton
 
 from ..Client.Clients import CfClient
-from ..concurrent.taskManager import TaskExecutor
+from Plugins.ModPlaza_Plugin.src.concurrent.task.taskManager import TaskExecutor
 from ..curseforge import SchemaClasses as sc
 
 

@@ -1,4 +1,3 @@
-import warnings
 from typing import List, Optional, Callable, Iterable, Sized, Tuple, Union
 
 from PyQt5.QtCore import QObject, pyqtSignal, QMutex, QSemaphore
@@ -56,7 +55,7 @@ class Future(QObject):
     partialDone = pyqtSignal(object)  # child future
     childrenDone = pyqtSignal(object)  # self
 
-    def __init__(self):
+    def __init__(self, semaphore=0):
         super().__init__()
         self._taskID = None
         self._failedCallback = lambda e: None
@@ -70,6 +69,7 @@ class Future(QObject):
         self._callback = lambda _: None
         self._mutex = QMutex()
         self._extra = {}
+        self._semaphore = QSemaphore(semaphore)
 
     def __onChildDone(self, childFuture: 'Future') -> None:
         self._mutex.lock()
@@ -183,6 +183,20 @@ class Future(QObject):
         future = Future()
         future.__setChildren(futures)
         return future
+
+    @property
+    def semaphore(self):
+        return self._semaphore
+
+    def wait(self):
+        if self.hasChildren():
+            for child in self.getChildren():
+                child.wait()
+        else:
+            self.semaphore.acquire(1)
+
+    def synchronize(self):
+        self.wait()
 
     def isDone(self) -> bool:
         return self._done

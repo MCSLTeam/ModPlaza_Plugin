@@ -3,9 +3,9 @@ from typing import Callable, List, Tuple, Optional, Dict
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QWidget
 
-from ..concurrent.taskManager import BaseTaskExecutor
-from ..concurrent.task import BaseTask
-from ..concurrent.future import Future
+from Plugins.ModPlaza_Plugin.src.concurrent.task.taskManager import BaseTaskExecutor
+from Plugins.ModPlaza_Plugin.src.concurrent.task.task import BaseTask
+from Plugins.ModPlaza_Plugin.src.concurrent.future.future import Future
 from ..concurrent.fetchImageTask import FetchImageBaseTask
 
 

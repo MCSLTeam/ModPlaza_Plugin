@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QApplication
 sys.path.append(os.path.join(os.getcwd(), "site-packages"))
 print(os.path.join(os.getcwd(), "site-packages"))
 from Plugins.ModPlaza_Plugin.src.Client.Clients import CfClient
-from src.concurrent.taskManager import TaskExecutor
+from Plugins.ModPlaza_Plugin.src.concurrent.task.taskManager import TaskExecutor
 
 app = QApplication(sys.argv)
 
@@ -30,6 +30,7 @@ manager = TaskExecutor(useGlobalThreadPool=False)
 for i in range(10):
     manager.asyncRun(func_ptr, i)
 manager.threadPool.waitForDone()
+manager.deleteLater()
 
 print("var test done\n" + "-" * 50)
 
@@ -48,6 +49,7 @@ for i in range(10):
         i)
 
 manager.threadPool.waitForDone()
+manager.deleteLater()
 print("lambda test done\n" + "-" * 50)
 
 # lambda test (直接用lambda就行,因为manager.asyncRun()会自动包装成functools.partial)
@@ -62,6 +64,7 @@ for i in range(10):
     }, i)
 
 manager.threadPool.waitForDone()
+manager.deleteLater()
 print("lambda test done\n" + "-" * 50)
 
 

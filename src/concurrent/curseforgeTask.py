@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from .taskManager import BaseTaskExecutor
-from .task import BaseTask
-from .future import Future
+from Plugins.ModPlaza_Plugin.src.concurrent.task.taskManager import BaseTaskExecutor
+from Plugins.ModPlaza_Plugin.src.concurrent.task.task import BaseTask
+from Plugins.ModPlaza_Plugin.src.concurrent.future.future import Future
 from ..curseforge import CurseForgeAPI, SchemaClasses as schemas
 
 
