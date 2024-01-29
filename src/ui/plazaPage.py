@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QSpacerItem,
-    QFrame, QVBoxLayout, )
+    QFrame, QVBoxLayout, QStackedWidget, )
 from qfluentwidgets import (
     ComboBox,
     EditableComboBox,
@@ -23,12 +23,12 @@ from qfluentwidgets import (
     OpacityAniStackedWidget
 )
 
+from Plugins.ModPlaza_Plugin.src.concurrent.future.future import Future
 from .modDetailPage import ModDetailPage
 from .singleModWidget import SingleModWidget
 from ..concurrent.curseforgeTask import (
     CurseForgeSearchBody
 )
-from Plugins.ModPlaza_Plugin.src.concurrent.future.future import Future
 from ..curseforge import SchemaClasses as schemas
 from ..curseforge.Utils import getStructureCategories
 from ..managers import minecraftInfoManager, fetchImageManager, minecraftModSearchManager
@@ -257,12 +257,13 @@ class PlazaPage(QWidget):
     @pyqtSlot(schemas.Mod)
     def onSingleModWidgetClicked(self, widget: SingleModWidget):
         p = self.parent()
-        # p: ModPlazaStackedWidget
+        # p: QStackedWidget
         mod = widget.Mod
         detailedPage = ModDetailPage.getInstance(mod)
         detailedPage.backSignal.connect(self.onModDetailedPageLeave)
         if p.count() > 1:
-            p.removeWidgetByIndex(1)
+            p.widget(1).deleteLater()
+            p.removeWidget(p.widget(1))
             gc.collect()
         p.addWidget(detailedPage)
         p.setCurrentIndex(1)
